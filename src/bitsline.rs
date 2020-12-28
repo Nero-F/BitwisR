@@ -2,8 +2,8 @@ use std::sync::atomic::{ AtomicUsize, Ordering };
 use tuikit::prelude::*;
 
 static ID: AtomicUsize = AtomicUsize::new(0); 
-pub const COL_BEG: usize = 12;
-pub const ROW_BEG: usize = 2;
+pub const COL_BEG: usize = 42;
+pub const ROW_BEG: usize = 3;
 
 #[allow(dead_code)]
 pub struct BitsLine {
