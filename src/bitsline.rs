@@ -2,15 +2,15 @@ use std::sync::atomic::{ AtomicUsize, Ordering };
 use tuikit::prelude::*;
 
 static ID: AtomicUsize = AtomicUsize::new(0); 
-pub const COL_BEG: usize = 42;
+pub const COL_BEG: usize = 100;
 pub const ROW_BEG: usize = 3;
 
 #[allow(dead_code)]
 pub struct BitsLine {
-    dec_value: String,
-    bin_value: String,
-    hex_value: String,
-    value: isize,
+    pub dec_value: String,
+    pub bin_value: String,
+    pub hex_value: String,
+    pub value: isize,
     pub zone: Rectangle
 }
 
@@ -49,6 +49,12 @@ impl BitsLine {
             value: value,
             zone: Rectangle { top: ROW_BEG + id, left: COL_BEG, width: 8, height: 1 }
         }
+    }
+
+    pub fn update_values(&mut self, new_val: isize) {
+        self.value = new_val;
+        self.bin_value = format!("{:08b}", new_val);
+        self.hex_value = format!("{:x}", new_val);
     }
 
     fn update_value_from_binary(&mut self) {
