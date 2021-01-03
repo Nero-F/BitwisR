@@ -2,6 +2,8 @@
 mod bl;
 mod query;
 mod result;
+#[path = "binary_operation.rs"]
+mod boi;
 
 use tuikit::prelude::*;
 use tuikit::key::Key;
@@ -27,7 +29,7 @@ fn main() {
                             .unwrap();
     let _ = term.present();
     let mut query = query::Query::new();
-    let mut result = result::Results::new();
+    let mut interpreter = boi::OperationInterpreter::new();
     let mut v_lines = init_bit_table();
 
     while let Ok(ev) = term.poll_event() {
@@ -44,12 +46,14 @@ fn main() {
             Event::Key(Key::Backspace) => query.rm_char_to_input(),
             Event::Key(Key::Enter) => {
                 let res = query.get_input();
-                result.add_to_history(res);
+                interpreter.lexer(&res);
+                interpreter.parser();
+                interpreter.interpreter();
             },
             _ => {}
         }
         term.draw(&query).unwrap();
-        term.draw(&result).unwrap();
+        term.draw(&interpreter.result).unwrap();
         v_lines
             .iter()
             .for_each(|line| term.draw(line).unwrap());
