@@ -3,11 +3,12 @@ use tuikit::prelude::*;
 // Dummy struct until operaions gets implemented
 pub struct Results {
     history: Vec<String>,
+    res: Vec<String>,
 }
 
 impl Results {
     pub fn new() -> Self {
-        Results { history: Vec::new() }
+        Results { history: Vec::new(), res: Vec::new() }
     }
 
     fn is_only_space(&self, result: String) -> bool {
@@ -24,19 +25,34 @@ impl Results {
             self.history.push(result);
         }
     }
+
+    pub fn push_front_res(&mut self, result: String) {
+        if !result.is_empty() && !self.is_only_space(result.clone()) {
+            self.res.insert(0, result);
+        }
+    }
 }
 
 impl Draw for Results {
     fn draw(&self, canvas: &mut dyn Canvas) -> Result<()> {
         let mut row: usize = 1;
+        let attr = Attr { fg: Color::LIGHT_WHITE, ..Attr::default() };
+        let len = self.res.len();
 
-        self.history
-            .iter()
-            .rev()
-            .for_each(|res| {
-                canvas.print(row, 0, &res).unwrap();
-                row+=1;
-            });
+        for index in 0..len {
+            if self.res[index] == "#" {
+                row += 1;
+                continue;
+            }
+            if index == len - 2 {
+                canvas.print_with_attr(row, 0, &self.res[index], attr).unwrap();
+            } else {
+                canvas.print(row, 0, &self.res[index]).unwrap();
+            }
+            row+=1;
+        }
+        canvas.print(row, 0, "           ").unwrap();
+        
         Ok(())
     }
 }
