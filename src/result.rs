@@ -3,7 +3,7 @@ use tuikit::prelude::*;
 // Dummy struct until operaions gets implemented
 pub struct Results {
     history: Vec<String>,
-    res: Vec<String>,
+    pub res: Vec<String>,
 }
 
 impl Results {
@@ -29,6 +29,8 @@ impl Results {
     pub fn push_front_res(&mut self, result: String) {
         if !result.is_empty() && !self.is_only_space(result.clone()) {
             self.res.insert(0, result);
+        } else {
+            self.res.push(result);
         }
     }
 }
@@ -44,15 +46,13 @@ impl Draw for Results {
                 row += 1;
                 continue;
             }
-            if index == len - 2 {
+            if self.res[index].chars().nth(0).unwrap() == '─' || self.res[index].starts_with("Error:") {
                 canvas.print_with_attr(row, 0, &self.res[index], attr).unwrap();
             } else {
                 canvas.print(row, 0, &self.res[index]).unwrap();
             }
             row+=1;
         }
-        canvas.print(row, 0, "           ").unwrap();
-        
         Ok(())
     }
 }
