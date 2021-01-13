@@ -47,8 +47,10 @@ fn main() {
             Event::Key(Key::Enter) => {
                 let res = query.get_input();
                 interpreter.lexer(&res);
-                interpreter.parser();
-                interpreter.interpreter();
+                match interpreter.parser() {
+                    Ok(_) => interpreter.interpreter(),
+                    Err(_) => continue
+                };
             },
             _ => {}
         }
