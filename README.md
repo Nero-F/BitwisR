@@ -1,5 +1,5 @@
 # BitwisR
-A Rust cli tool to visualize bitwise operationq
+A Rust cli tool to visualize bitwise operations
 
 ### Basically a rust implementation of this [website](http://bitwisecmd.com/)
 
