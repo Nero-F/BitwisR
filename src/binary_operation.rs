@@ -1,5 +1,6 @@
 use atoi::atoi;
 use std::collections::HashMap;
+extern crate regex;
 
 #[path = "bitsline.rs"]
 mod bl;
@@ -14,7 +15,8 @@ pub enum BitwiseToken {
     RIGHTSHIFT,
     LEFTSHIFT,
     NOT,
-    NUMBER
+    NUMBER,
+    HEXNUMBER,
 }
 
 type Callback = fn(&mut OperationInterpreter) -> Option<()>;
@@ -175,6 +177,7 @@ impl OperationInterpreter {
     pub fn parser(&mut self) -> Result<(), String> {
         let mut is_err: bool = false;
         let mut corr_tokens = std::mem::take(&mut self.corr_tokens);
+        let r = regex::Regex::new(r"^-?0[xX][0-9a-fA-F]+$").unwrap();
 
         self.tokens
             .clone()
@@ -193,7 +196,9 @@ impl OperationInterpreter {
                     "<<" => corr_tokens.push(BitwiseToken::LEFTSHIFT),
                     "~" => corr_tokens.push(BitwiseToken::NOT),
                     _ => { 
-                        if x.parse::<isize>().is_err() {
+                        if r.is_match(z) {
+                            corr_tokens.push(BitwiseToken::HEXNUMBER)
+                        } else if x.parse::<isize>().is_err() {
                             is_err = true;
                         } else {
                             corr_tokens.push(BitwiseToken::NUMBER);
