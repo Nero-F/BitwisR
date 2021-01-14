@@ -6,7 +6,7 @@ mod bl;
 #[path = "result.rs"]
 mod result;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum BitwiseToken {
     AND,
     OR,
@@ -109,27 +109,48 @@ impl OperationInterpreter {
     }
 
     pub fn lexer(&mut self, input: &str) -> Vec<String> {
-        let mut tokens: Vec<String> = Vec::new();
+        let mut tokens = Vec::new();
         let mut buffer: Vec<char> = Vec::new();
         let mut nbr: isize;
         let mut i: usize = 0;
-        let epur = input.chars().filter(|c| !c.is_whitespace()).collect::<String>();
         self.input = String::from(input);
 
-        while i < epur.len() {
-            if epur.chars().nth(i).unwrap() == '-' && i + 1 < epur.len() &&
-               epur.chars().nth(i+1).unwrap().is_ascii_digit() ||
-               epur.chars().nth(i).unwrap().is_ascii_digit()
+        while i < input.len() {
+            // check for spaces
+            if input.chars().nth(i).unwrap() == ' ' ||
+               input.chars().nth(i).unwrap() == '\t' {
+                i += 1;
+                continue;
+            }
+            // Check for hexvalues and get get them
+            if i + 2 < input.len() && input.chars().nth(i).unwrap() == '0' &&
+               (input.chars().nth(i+1).unwrap() == 'x' || input.chars().nth(i+1).unwrap() == 'X'){
+                let mut f = String::new();
+                for ch in input[i..].as_bytes() {
+                    if *ch == 0x20_u8 || *ch == 0x90_u8 {
+                        break;
+                    }
+                    i += 1;
+                    f.push(*ch as char);
+                }
+                tokens.push(f);
+                continue;
+
+            }
+            // Check for decimal values and get them
+            if input.chars().nth(i).unwrap() == '-' && i + 1 < input.len() &&
+               input.chars().nth(i+1).unwrap().is_ascii_digit() ||
+               input.chars().nth(i).unwrap().is_ascii_digit()
                {
                 if !buffer.is_empty() {
                     tokens.push(buffer.iter().collect::<String>());
                     buffer.clear();
                 }
-                nbr = atoi::<isize>(epur[i..].as_bytes()).unwrap();
+                nbr = atoi::<isize>(input[i..].as_bytes()).unwrap();
                 tokens.push(nbr.to_string());
                 i += nbr.clone().to_string().len() - 1;
             } else {
-                buffer.push(epur.chars().nth(i).unwrap());
+                buffer.push(input.chars().nth(i).unwrap());
             }
             i += 1;
         }
@@ -193,6 +214,7 @@ impl OperationInterpreter {
     }
 
     pub fn interpreter(&mut self) {
+        println!("{:?}", self.corr_tokens);
         match self.corr_tokens[..] {
             [] => {},
             [BitwiseToken::NOT, BitwiseToken::NUMBER] => op_not(self).unwrap(),
@@ -206,13 +228,13 @@ impl OperationInterpreter {
 #[test]
 fn test_tokenizer() {
     let input = "123344abzefc2112333";
-    let input2 = "azda1231azdaz11";
+    let input2 = "0x12 123";
     let input3 = "-1|3";
     let input4 = "1     | 3  ";
     let mut op_interpreter = OperationInterpreter::new();
 
     assert_eq!(["123344", "abzefc", "2112333"].to_vec(), op_interpreter.lexer(input));
-    assert_eq!(["azda", "1231", "azdaz", "11"].to_vec(), op_interpreter.lexer(input2));
+    assert_eq!(["0x12", "123"].to_vec(), op_interpreter.lexer(input2));
     assert_eq!(["-1", "|", "3"].to_vec(), op_interpreter.lexer(input3));
     assert_eq!(["1", "|", "3"].to_vec(), op_interpreter.lexer(input4));
 }
@@ -224,6 +246,16 @@ fn test_parser() {
     let mut op_interpreter = OperationInterpreter::new();
     op_interpreter.lexer(input);
     assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
+}
+
+#[test]
+fn test_invalid_input() {
+    let input = "13a1";
+
+    let mut op_interpreter = OperationInterpreter::new();
+    op_interpreter.lexer(input);
+    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
+
 }
 
 #[test]
