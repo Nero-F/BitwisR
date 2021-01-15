@@ -66,6 +66,14 @@ fn format_singed_output(token: &str, v: isize) -> String {
         }
 }
 
+fn op_number(interpreter: &mut OperationInterpreter) -> Option<()> {
+    let res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
+    let res = format_singed_output("=", res_line.value);
+    interpreter.result.push_front_res(res);
+    Some(())
+}
+
+
 fn op_not(interpreter: &mut OperationInterpreter) -> Option<()> {
     let mut res_line = bl::BitsLine::new(interpreter.tokens[1].parse::<isize>().unwrap());
     let op = format_singed_output(&interpreter.tokens[0], res_line.value);
@@ -219,11 +227,22 @@ impl OperationInterpreter {
     }
 
     pub fn interpreter(&mut self) {
-        println!("{:?}", self.corr_tokens);
         match self.corr_tokens[..] {
             [] => {},
-            [BitwiseToken::NOT, BitwiseToken::NUMBER] => op_not(self).unwrap(),
+            [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
+                op_not(self).unwrap();
+                self.corr_tokens = self.corr_tokens[2..].to_vec();
+                self.tokens = self.tokens[2..].to_vec();
+            },
+            [BitwiseToken::NUMBER, ..] => {
+                op_number(self).unwrap();
+                self.corr_tokens = self.corr_tokens[1..].to_vec();
+                self.tokens = self.tokens[1..].to_vec();
+            },
             _ => {},
+        }
+        if self.corr_tokens.len() != 0 {
+            self.interpreter();
         }
         self.corr_tokens.clear();
         self.tokens.clear();
@@ -236,22 +255,24 @@ fn test_tokenizer() {
     let input2 = "0x12 123";
     let input3 = "-1|3";
     let input4 = "1     | 3  ";
+    let input5 = "1 3";
     let mut op_interpreter = OperationInterpreter::new();
 
     assert_eq!(["123344", "abzefc", "2112333"].to_vec(), op_interpreter.lexer(input));
     assert_eq!(["0x12", "123"].to_vec(), op_interpreter.lexer(input2));
     assert_eq!(["-1", "|", "3"].to_vec(), op_interpreter.lexer(input3));
     assert_eq!(["1", "|", "3"].to_vec(), op_interpreter.lexer(input4));
+    assert_eq!(["1", "3"].to_vec(), op_interpreter.lexer(input5));
 }
 
-#[test]
-fn test_parser() {
-    let input = "13a1";
+//#[test]
+//fn test_parser() {
+    //let input = "13a1";
 
-    let mut op_interpreter = OperationInterpreter::new();
-    op_interpreter.lexer(input);
-    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
-}
+    //let mut op_interpreter = OperationInterpreter::new();
+    //op_interpreter.lexer(input);
+    //assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
+//}
 
 #[test]
 fn test_invalid_input() {
