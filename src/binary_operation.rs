@@ -58,27 +58,51 @@ fn format_bin_string(value: isize) -> String {
     //Some(())
 //}
 
-fn format_singed_output(token: &str, v: isize) -> String {
+fn format_signed_output(token: &str, v: isize) -> String {
     if v < 0 {
         format!("{} -{} {} -{:#x}", token, -1 * v, format_bin_string(v), -1 * v)
     } else {
         format!("{}  {} {}  {:#x}", token, v, format_bin_string(v), v)
-        }
+    }
 }
 
-fn op_number(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
-    let res = format_singed_output("=", res_line.value);
+fn format_hex_signed_output(token: &str, h: &str) -> String {
+    let hl = h.to_lowercase();
+    let mut neg = false;
+
+    let trimmed = if h.chars().nth(0).unwrap() == '-' {
+        neg = true;
+        hl.trim_start_matches("-0x")
+    } else {
+        hl.trim_start_matches("0x")
+    };
+    let v = isize::from_str_radix(trimmed, 16).unwrap();
+
+    if neg == true {
+        format!("{} {} {} {}", token, hl, format_bin_string(-1 * v), -1 * v)
+    } else {
+        format!("{}  {} {}  {}", token, hl, format_bin_string(v), v)
+    }
+}
+
+fn op_hexnumber(interpreter: &mut OperationInterpreter) -> Option<()> {
+    let res = format_hex_signed_output("=", &interpreter.tokens[0]);
     interpreter.result.push_front_res(res);
     Some(())
 }
 
+fn op_number(interpreter: &mut OperationInterpreter) -> Option<()> {
+    let res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
+    let res = format_signed_output("=", res_line.value);
+    interpreter.result.push_front_res(res);
+    Some(())
+}
 
 fn op_not(interpreter: &mut OperationInterpreter) -> Option<()> {
     let mut res_line = bl::BitsLine::new(interpreter.tokens[1].parse::<isize>().unwrap());
-    let op = format_singed_output(&interpreter.tokens[0], res_line.value);
+    let op = format_signed_output(&interpreter.tokens[0], res_line.value);
     res_line.update_values(!res_line.value);
-    let res = format_singed_output("=", res_line.value);
+    let res = format_signed_output("=", res_line.value);
     let len_res = res.len();
 
     interpreter.result.push_front_res(res);
@@ -132,11 +156,16 @@ impl OperationInterpreter {
                 i += 1;
                 continue;
             }
-            // Check for hexvalues and get get them
-            if i + 2 < input.len() && input.chars().nth(i).unwrap() == '0' &&
-               (input.chars().nth(i+1).unwrap() == 'x' || input.chars().nth(i+1).unwrap() == 'X'){
+            // Check for hexvalues and get them
+            // TODO: Maybe replace this with regex
+            if i + 2 < input.len() &&
+               (input.chars().nth(i).unwrap() == '-' && input.chars().nth(i+1).unwrap() == '0' &&
+               (input.chars().nth(i+2).unwrap() == 'x' || input.chars().nth(i+2).unwrap() == 'X')) ||
+               (input.chars().nth(i).unwrap() == '0' &&
+               (input.chars().nth(i+1).unwrap() == 'x' || input.chars().nth(i+1).unwrap() == 'X')) {
                 let mut f = String::new();
                 for ch in input[i..].as_bytes() {
+                    // Checks for tabs or spaces
                     if *ch == 0x20_u8 || *ch == 0x90_u8 {
                         break;
                     }
@@ -239,6 +268,11 @@ impl OperationInterpreter {
                 self.corr_tokens = self.corr_tokens[1..].to_vec();
                 self.tokens = self.tokens[1..].to_vec();
             },
+            [BitwiseToken::HEXNUMBER, ..] => {
+                op_hexnumber(self).unwrap();
+                self.corr_tokens = self.corr_tokens[1..].to_vec();
+                self.tokens = self.tokens[1..].to_vec();
+            },
             _ => {},
         }
         if self.corr_tokens.len() != 0 {
@@ -256,6 +290,7 @@ fn test_tokenizer() {
     let input3 = "-1|3";
     let input4 = "1     | 3  ";
     let input5 = "1 3";
+    let input6 = "-0x12";
     let mut op_interpreter = OperationInterpreter::new();
 
     assert_eq!(["123344", "abzefc", "2112333"].to_vec(), op_interpreter.lexer(input));
@@ -263,16 +298,24 @@ fn test_tokenizer() {
     assert_eq!(["-1", "|", "3"].to_vec(), op_interpreter.lexer(input3));
     assert_eq!(["1", "|", "3"].to_vec(), op_interpreter.lexer(input4));
     assert_eq!(["1", "3"].to_vec(), op_interpreter.lexer(input5));
+    assert_eq!(["-0x12"].to_vec(), op_interpreter.lexer(input6));
 }
 
-//#[test]
-//fn test_parser() {
-    //let input = "13a1";
+#[test]
+fn test_parser() {
+    let num_only = "42";
+    let hexnum_only = "0x2a";
 
-    //let mut op_interpreter = OperationInterpreter::new();
-    //op_interpreter.lexer(input);
-    //assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
-//}
+    let mut op_interpreter = OperationInterpreter::new();
+    op_interpreter.lexer(num_only);
+    op_interpreter.parser().unwrap();
+    assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::NUMBER].to_vec());
+    op_interpreter.interpreter();
+    op_interpreter.lexer(hexnum_only);
+    op_interpreter.parser().unwrap();
+    assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::HEXNUMBER].to_vec());
+    op_interpreter.interpreter();
+}
 
 #[test]
 fn test_invalid_input() {
