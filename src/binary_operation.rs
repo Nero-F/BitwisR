@@ -86,14 +86,14 @@ fn format_hex_signed_output(token: &str, h: &str) -> String {
 }
 
 fn op_hexnumber(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let res = format_hex_signed_output("=", &interpreter.tokens[0]);
+    let res = format_hex_signed_output("✪", &interpreter.tokens[0]);
     interpreter.result.push_front_res(res);
     Some(())
 }
 
 fn op_number(interpreter: &mut OperationInterpreter) -> Option<()> {
     let res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
-    let res = format_signed_output("=", res_line.value);
+    let res = format_signed_output("✪", res_line.value);
     interpreter.result.push_front_res(res);
     Some(())
 }
@@ -277,9 +277,11 @@ impl OperationInterpreter {
         }
         if self.corr_tokens.len() != 0 {
             self.interpreter();
+            return;
         }
         self.corr_tokens.clear();
         self.tokens.clear();
+        self.result.push_front_res("#".to_string());
     }
 }
 
