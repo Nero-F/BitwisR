@@ -211,10 +211,15 @@ impl OperationInterpreter {
         self.corr_tokens = corr_tokens;
     }
 
+    pub fn clear_token_holders(&mut self) {
+        self.corr_tokens.clear();
+        self.tokens.clear();
+    }
+
     pub fn parser(&mut self) -> Result<(), String> {
         let mut is_err: bool = false;
         let mut corr_tokens = std::mem::take(&mut self.corr_tokens);
-        let r = regex::Regex::new(r"^-?0[xX][0-9a-fA-F]+$").unwrap();
+        let reg_hex = regex::Regex::new(r"^-?0[xX][0-9a-fA-F]+$").unwrap();
 
         self.tokens
             .clone()
@@ -233,7 +238,7 @@ impl OperationInterpreter {
                     "<<" => corr_tokens.push(BitwiseToken::LEFTSHIFT),
                     "~" => corr_tokens.push(BitwiseToken::NOT),
                     _ => { 
-                        if r.is_match(z) {
+                        if reg_hex.is_match(z) {
                             corr_tokens.push(BitwiseToken::HEXNUMBER)
                         } else if x.parse::<isize>().is_err() {
                             is_err = true;
@@ -244,11 +249,10 @@ impl OperationInterpreter {
                 }
             });
         self.corr_tokens = corr_tokens;
-        if is_err {
+        if is_err || self.tokens.len() == 0 {
             let mut err: String = String::from("Error: cannot process this operation: ");
             err.push_str(&self.input);
-            self.result.push_front_res(err.clone());
-            self.result.push_front_res("#".to_string());
+            self.clear_token_holders();
             return Err(err);
         }
         self.init_op_number();
@@ -279,8 +283,7 @@ impl OperationInterpreter {
             self.interpreter();
             return;
         }
-        self.corr_tokens.clear();
-        self.tokens.clear();
+        self.clear_token_holders();
         self.result.push_front_res("#".to_string());
     }
 }
@@ -322,11 +325,13 @@ fn test_parser() {
 #[test]
 fn test_invalid_input() {
     let input = "13a1";
+    let input2 = "lorem ipsum";
 
     let mut op_interpreter = OperationInterpreter::new();
     op_interpreter.lexer(input);
     assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
-
+    op_interpreter.input = input2.to_string();
+    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: lorem ipsum".to_string()));
 }
 
 #[test]
