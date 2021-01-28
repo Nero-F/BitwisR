@@ -49,7 +49,10 @@ fn main() {
                 interpreter.lexer(&res);
                 match interpreter.parser() {
                     Ok(_) => interpreter.interpreter(),
-                    Err(_) => continue
+                    Err(err) => {
+                        interpreter.result.push_front_res(err);
+                        interpreter.result.push_front_res("#".to_string());
+                    }
                 };
             },
             _ => {}
