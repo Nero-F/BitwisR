@@ -38,6 +38,11 @@ fn format_bin_string(value: isize) -> String {
     well_formated.iter().collect::<String>()
 }
 
+fn dump_line_of_len(result: &mut result::Results, length: usize) {
+    let line = (0..length).map(|_| "─").collect::<String>();
+    result.push_front_res(line);
+}
+
 //fn op_and(interpreter: &mut OperationInterpreter) -> Option<()> {
     //Some(())
 //}
@@ -54,9 +59,13 @@ fn format_bin_string(value: isize) -> String {
     //Some(())
 //}
 
-//fn op_leftshift(interpreter: &mut OperationInterpreter) -> Option<()> {
-    //Some(())
-//}
+fn format_signed_output_shift(token: &str, value: isize, value2: isize) -> String {
+    if value < 0 {
+        format!("{}{} -{} {} -{:#x}", token, value2, -1 * value, format_bin_string(value), -1 * value)
+    } else {
+        format!("{}{}  {} {}  {:#x}", token, value2, value, format_bin_string(value), value)
+    }
+}
 
 fn format_signed_output(token: &str, v: isize) -> String {
     if v < 0 {
@@ -85,6 +94,29 @@ fn format_hex_signed_output(token: &str, h: &str) -> String {
     }
 }
 
+fn op_leftshift(interpreter: &mut OperationInterpreter) -> Option<()> {
+    let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
+    let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
+    let op = format_signed_output("   ", res_line.value);
+    
+    if nb2.value <= 0 {
+        interpreter.result.push_front_res("Error: Cannot perform a leftshift with a value smaller than 1".to_string());
+        interpreter.op_num -= 1;
+        return Some(());
+    }
+    res_line.update_values(res_line.value << nb2.value);
+    let res = format_signed_output_shift("<<", res_line.value, nb2.value);
+    let len_res = res.len();
+
+    interpreter.result.push_front_res(res);
+    if interpreter.op_num >= 1 {
+        dump_line_of_len(&mut interpreter.result, len_res);
+    }
+    interpreter.result.push_front_res(op);
+    interpreter.op_num -= 1;
+    Some(())
+}
+
 fn op_hexnumber(interpreter: &mut OperationInterpreter) -> Option<()> {
     let res = format_hex_signed_output("✪", &interpreter.tokens[0]);
     interpreter.result.push_front_res(res);
@@ -107,8 +139,7 @@ fn op_not(interpreter: &mut OperationInterpreter) -> Option<()> {
 
     interpreter.result.push_front_res(res);
     if interpreter.op_num >= 1 {
-        let line = (0..len_res).map(|_| "─").collect::<String>();
-        interpreter.result.push_front_res(line);
+        dump_line_of_len(&mut interpreter.result, len_res);
     }
     interpreter.result.push_front_res(op);
     interpreter.op_num -= 1;
@@ -159,10 +190,10 @@ impl OperationInterpreter {
             // Check for hexvalues and get them
             // TODO: Maybe replace this with regex
             if i + 2 < input.len() &&
-               (input.chars().nth(i).unwrap() == '-' && input.chars().nth(i+1).unwrap() == '0' &&
+               ((input.chars().nth(i).unwrap() == '-' && input.chars().nth(i+1).unwrap() == '0' &&
                (input.chars().nth(i+2).unwrap() == 'x' || input.chars().nth(i+2).unwrap() == 'X')) ||
                (input.chars().nth(i).unwrap() == '0' &&
-               (input.chars().nth(i+1).unwrap() == 'x' || input.chars().nth(i+1).unwrap() == 'X')) {
+               (input.chars().nth(i+1).unwrap() == 'x' || input.chars().nth(i+1).unwrap() == 'X'))) {
                 let mut f = String::new();
                 for ch in input[i..].as_bytes() {
                     // Checks for tabs or spaces
@@ -174,7 +205,6 @@ impl OperationInterpreter {
                 }
                 tokens.push(f);
                 continue;
-
             }
             // Check for decimal values and get them
             if input.chars().nth(i).unwrap() == '-' && i + 1 < input.len() &&
@@ -262,6 +292,11 @@ impl OperationInterpreter {
     pub fn interpreter(&mut self) {
         match self.corr_tokens[..] {
             [] => {},
+            [BitwiseToken::NUMBER, BitwiseToken::LEFTSHIFT, BitwiseToken::NUMBER, ..] => {
+                op_leftshift(self).unwrap();
+                self.corr_tokens = self.corr_tokens[3..].to_vec();
+                self.tokens = self.tokens[3..].to_vec();
+            }
             [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
                 op_not(self).unwrap();
                 self.corr_tokens = self.corr_tokens[2..].to_vec();
@@ -296,6 +331,7 @@ fn test_tokenizer() {
     let input4 = "1     | 3  ";
     let input5 = "1 3";
     let input6 = "-0x12";
+    let input7 = "0";
     let mut op_interpreter = OperationInterpreter::new();
 
     assert_eq!(["123344", "abzefc", "2112333"].to_vec(), op_interpreter.lexer(input));
@@ -304,6 +340,7 @@ fn test_tokenizer() {
     assert_eq!(["1", "|", "3"].to_vec(), op_interpreter.lexer(input4));
     assert_eq!(["1", "3"].to_vec(), op_interpreter.lexer(input5));
     assert_eq!(["-0x12"].to_vec(), op_interpreter.lexer(input6));
+    assert_eq!(["0"].to_vec(), op_interpreter.lexer(input7));
 }
 
 #[test]
