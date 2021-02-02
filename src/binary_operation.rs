@@ -92,11 +92,11 @@ fn op_xor(interpreter: &mut OperationInterpreter) -> Option<()> {
         bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap()),
         bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap())
     ];
-    let op = format_signed_output("  ", res_line.value);
     
     res_line.update_values(nbr[0].value ^ nbr[1].value);
-    let l1 = format_signed_output_shift(" ", res_line.value, nbr[0].value);
-    let l2 = format_signed_output_shift("^ ", res_line.value, nbr[1].value);
+    let op = format_signed_output("=", res_line.value);
+    let l1 = format_signed_output("", nbr[0].value);
+    let l2 = format_signed_output("^", nbr[1].value);
     let len_res = l2.len();
 
     interpreter.result.push_front_res(op);
