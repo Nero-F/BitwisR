@@ -11,6 +11,6 @@ A Rust cli tool to visualize bitwise operations
 - [ ] And
 - [ ] OR
 - [ ] XOR
-- [ ] Bitwise Right
-- [ ] Bitwise Left
+- [x] Bitwise Right
+- [x] Bitwise Left
 - [x] Value (only)
