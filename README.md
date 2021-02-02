@@ -8,7 +8,7 @@ A Rust cli tool to visualize bitwise operations
 ## Binary Operations
 
 - [x] Not
-- [ ] And
+- [x] And
 - [x] OR
 - [x] XOR
 - [x] Bitwise Right
