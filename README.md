@@ -9,7 +9,7 @@ A Rust cli tool to visualize bitwise operations
 
 - [x] Not
 - [ ] And
-- [ ] OR
+- [x] OR
 - [x] XOR
 - [x] Bitwise Right
 - [x] Bitwise Left
