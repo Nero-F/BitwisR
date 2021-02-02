@@ -55,9 +55,6 @@ fn dump_line_of_len(result: &mut result::Results, length: usize) {
     //Some(())
 //}
 
-//fn op_rightshift(interpreter: &mut OperationInterpreter) -> Option<()> {
-    //Some(())
-//}
 
 fn format_signed_output_shift(token: &str, value: isize, value2: isize) -> String {
     if value < 0 {
@@ -92,6 +89,29 @@ fn format_hex_signed_output(token: &str, h: &str) -> String {
     } else {
         format!("{}  {} {}  {}", token, hl, format_bin_string(v), v)
     }
+}
+
+fn op_rightshift(interpreter: &mut OperationInterpreter) -> Option<()> {
+    let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
+    let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
+    let op = format_signed_output("   ", res_line.value);
+    
+    if nb2.value <= 0 {
+        interpreter.result.push_front_res("Error: Cannot perform a leftshift with a value smaller than 1".to_string());
+        interpreter.op_num -= 1;
+        return Some(());
+    }
+    res_line.update_values(res_line.value >> nb2.value);
+    let res = format_signed_output_shift(">>", res_line.value, nb2.value);
+    let len_res = res.len();
+
+    interpreter.result.push_front_res(res);
+    if interpreter.op_num >= 1 {
+        dump_line_of_len(&mut interpreter.result, len_res);
+    }
+    interpreter.result.push_front_res(op);
+    interpreter.op_num -= 1;
+    Some(())
 }
 
 fn op_leftshift(interpreter: &mut OperationInterpreter) -> Option<()> {
@@ -143,7 +163,6 @@ fn op_not(interpreter: &mut OperationInterpreter) -> Option<()> {
     }
     interpreter.result.push_front_res(op);
     interpreter.op_num -= 1;
-    interpreter.result.push_front_res("#".to_string());
     Some(())
 }
 
@@ -292,11 +311,16 @@ impl OperationInterpreter {
     pub fn interpreter(&mut self) {
         match self.corr_tokens[..] {
             [] => {},
+            [BitwiseToken::NUMBER, BitwiseToken::RIGHTSHIFT, BitwiseToken::NUMBER, ..] => {
+                op_rightshift(self).unwrap();
+                self.corr_tokens = self.corr_tokens[3..].to_vec();
+                self.tokens = self.tokens[3..].to_vec();
+            },
             [BitwiseToken::NUMBER, BitwiseToken::LEFTSHIFT, BitwiseToken::NUMBER, ..] => {
                 op_leftshift(self).unwrap();
                 self.corr_tokens = self.corr_tokens[3..].to_vec();
                 self.tokens = self.tokens[3..].to_vec();
-            }
+            },
             [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
                 op_not(self).unwrap();
                 self.corr_tokens = self.corr_tokens[2..].to_vec();
