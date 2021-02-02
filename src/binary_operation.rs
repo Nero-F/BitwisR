@@ -43,19 +43,6 @@ fn dump_line_of_len(result: &mut result::Results, length: usize) {
     result.push_front_res(line);
 }
 
-//fn op_and(interpreter: &mut OperationInterpreter) -> Option<()> {
-    //Some(())
-//}
-
-//fn op_or(interpreter: &mut OperationInterpreter) -> Option<()> {
-    //Some(())
-//}
-
-//fn op_xor(interpreter: &mut OperationInterpreter) -> Option<()> {
-    //Some(())
-//}
-
-
 fn format_signed_output_shift(token: &str, value: isize, value2: isize) -> String {
     if value < 0 {
         format!("{}{} -{} {} -{:#x}", token, value2, -1 * value, format_bin_string(value), -1 * value)
@@ -71,6 +58,14 @@ fn format_signed_output(token: &str, v: isize) -> String {
         format!("{}  {} {}  {:#x}", token, v, format_bin_string(v), v)
     }
 }
+
+//fn op_and(interpreter: &mut OperationInterpreter) -> Option<()> {
+    //Some(())
+//}
+
+//fn op_or(interpreter: &mut OperationInterpreter) -> Option<()> {
+    //Some(())
+//}
 
 fn format_hex_signed_output(token: &str, h: &str) -> String {
     let hl = h.to_lowercase();
@@ -91,13 +86,36 @@ fn format_hex_signed_output(token: &str, h: &str) -> String {
     }
 }
 
+fn op_xor(interpreter: &mut OperationInterpreter) -> Option<()> {
+    let mut res_line = bl::BitsLine::new(0);
+    let nbr: [bl::BitsLine; 2] = [
+        bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap()),
+        bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap())
+    ];
+    let op = format_signed_output("  ", res_line.value);
+    
+    res_line.update_values(nbr[0].value ^ nbr[1].value);
+    let l1 = format_signed_output_shift(" ", res_line.value, nbr[0].value);
+    let l2 = format_signed_output_shift("^ ", res_line.value, nbr[1].value);
+    let len_res = l2.len();
+
+    interpreter.result.push_front_res(op);
+    if interpreter.op_num >= 1 {
+        dump_line_of_len(&mut interpreter.result, len_res);
+    }
+    interpreter.result.push_front_res(l2);
+    interpreter.result.push_front_res(l1);
+    interpreter.op_num -= 1;
+    Some(())
+}
+
 fn op_rightshift(interpreter: &mut OperationInterpreter) -> Option<()> {
     let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
     let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
     let op = format_signed_output("   ", res_line.value);
     
     if nb2.value <= 0 {
-        interpreter.result.push_front_res("Error: Cannot perform a leftshift with a value smaller than 1".to_string());
+        interpreter.result.push_front_res("Error: Cannot perform a rightshift with a value smaller than 1".to_string());
         interpreter.op_num -= 1;
         return Some(());
     }
@@ -311,6 +329,11 @@ impl OperationInterpreter {
     pub fn interpreter(&mut self) {
         match self.corr_tokens[..] {
             [] => {},
+            [BitwiseToken::NUMBER, BitwiseToken::XOR, BitwiseToken::NUMBER, ..] => {
+                op_xor(self).unwrap();
+                self.corr_tokens = self.corr_tokens[3..].to_vec();
+                self.tokens = self.tokens[3..].to_vec();
+            },
             [BitwiseToken::NUMBER, BitwiseToken::RIGHTSHIFT, BitwiseToken::NUMBER, ..] => {
                 op_rightshift(self).unwrap();
                 self.corr_tokens = self.corr_tokens[3..].to_vec();
