@@ -14,3 +14,8 @@ A Rust cli tool to visualize bitwise operations
 - [x] Bitwise Right
 - [x] Bitwise Left
 - [x] Value (only)
+
+## TODO
+
+- [ ] Command chaining system
+- [ ] command line redirections
