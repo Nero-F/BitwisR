@@ -1,5 +1,6 @@
 use tuikit::prelude::*;
 
+#[allow(dead_code)]
 pub struct Query {
     history: Vec<String>,
     prompt: String,
@@ -14,6 +15,7 @@ impl Query {
     pub fn add_char_to_input(&mut self, ch: char) {
         self.query.push(ch);
     }
+
     pub fn rm_char_to_input(&mut self) {
         self.query.pop();
     }

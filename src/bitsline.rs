@@ -38,6 +38,7 @@ impl Draw for BitsLine {
     }
 }
 
+#[allow(dead_code)]
 impl BitsLine {
     pub fn new(value: isize) -> BitsLine {
         let id = ID.fetch_add(1, Ordering::SeqCst);
