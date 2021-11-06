@@ -28,7 +28,7 @@ impl Query {
 }
 
 impl Draw for Query {
-    fn draw(&self, canvas: &mut dyn Canvas) -> Result<()> {
+    fn draw(&self, canvas: &mut dyn Canvas) -> DrawResult<()> {
         canvas.clear()?;
         let prompt = &self.prompt;
         let mut pos = prompt.len();
