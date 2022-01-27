@@ -15,7 +15,7 @@ pub struct BitsLine {
 }
 
 impl Draw for BitsLine {
-    fn draw(&self, canvas: &mut dyn Canvas) -> Result<()> {
+    fn draw(&self, canvas: &mut dyn Canvas) -> DrawResult<()> {
         let row = self.zone.top;
         let mut col = self.zone.left;
         let mut attr = Attr { fg: Color::LIGHT_WHITE, effect: Effect::BOLD, ..Attr::default() };
