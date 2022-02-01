@@ -1,11 +1,13 @@
 use atoi::atoi;
-use std::collections::HashMap;
+//use std::collections::HashMap;
 extern crate regex;
 
 #[path = "bitsline.rs"]
 mod bl;
 #[path = "result.rs"]
 mod result;
+#[path = "formatter.rs"]
+mod fm;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum BitwiseToken {
@@ -19,234 +21,163 @@ pub enum BitwiseToken {
     HEXNUMBER,
 }
 
-type Callback = fn(&mut OperationInterpreter) -> Option<()>;
-
-//TODO: handle 64bits values
-fn format_bin_string(value: isize) -> String {
-    let mut well_formated: Vec<char> = Vec::new();
-    let tmp: Vec<char> = format!("{:064b}", value).chars().collect();
-    let limit = if value > 4294967295 { 64 } else { 32 };
-    let mut end_tmp: usize = tmp.len()-1;
-
-    for i in (0..limit).rev() {
-        well_formated.insert(0, tmp[end_tmp]);
-        if i % 8 == 0 {
-            well_formated.insert(0, ' ');
-        }
-        end_tmp -= 1;
-    }
-    well_formated.iter().collect::<String>()
-}
-
-fn dump_line_of_len(result: &mut result::Results, length: usize) {
-    let line = (0..length).map(|_| "─").collect::<String>();
-    result.push_front_res(line);
-}
-
-fn format_signed_output_shift(token: &str, value: isize, value2: isize) -> String {
-    if value < 0 {
-        format!("{}{} -{} {} -{:#x}", token, value2, -1 * value, format_bin_string(value), -1 * value)
-    } else {
-        format!("{}{}  {} {}  {:#x}", token, value2, value, format_bin_string(value), value)
-    }
-}
-
-fn format_signed_output(token: &str, v: isize) -> String {
-    if v < 0 {
-        format!("{} -{} {} -{:#x}", token, -1 * v, format_bin_string(v), -1 * v)
-    } else {
-        format!("{}  {} {}  {:#x}", token, v, format_bin_string(v), v)
-    }
-}
-
-fn format_hex_signed_output(token: &str, h: &str) -> String {
-    let hl = h.to_lowercase();
-    let mut neg = false;
-
-    let trimmed = if h.chars().nth(0).unwrap() == '-' {
-        neg = true;
-        hl.trim_start_matches("-0x")
-    } else {
-        hl.trim_start_matches("0x")
-    };
-    let v = isize::from_str_radix(trimmed, 16).unwrap();
-
-    if neg == true {
-        format!("{} {} {} {}", token, hl, format_bin_string(-1 * v), -1 * v)
-    } else {
-        format!("{}  {} {}  {}", token, hl, format_bin_string(v), v)
-    }
-}
-
 fn op_and(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let mut res_line = bl::BitsLine::new(0);
+    let mut res_bits_line = bl::BitsLine::new(0);
     let nbr: [bl::BitsLine; 2] = [
         bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap()),
         bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap())
     ];
     
-    res_line.update_values(nbr[0].value & nbr[1].value);
-    let op = format_signed_output("=", res_line.value);
-    let l1 = format_signed_output("", nbr[0].value);
-    let l2 = format_signed_output("&", nbr[1].value);
-    let len_res = l2.len();
+    res_bits_line.update_values(nbr[0].value & nbr[1].value);
 
-    interpreter.result.push_front_res(op);
-    if interpreter.op_num >= 1 {
-        dump_line_of_len(&mut interpreter.result, len_res);
-    }
-    interpreter.result.push_front_res(l2);
-    interpreter.result.push_front_res(l1);
-    interpreter.op_num -= 1;
+    interpreter.result.cache.append(&mut vec![('=', res_bits_line.value), ('&', nbr[1].value), (' ', nbr[0].value)]);
+    interpreter.nb_operations -= 1;
     Some(())
 
 }
 
 fn op_or(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let mut res_line = bl::BitsLine::new(0);
+    let mut res_bits_line = bl::BitsLine::new(0);
     let nbr: [bl::BitsLine; 2] = [
         bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap()),
         bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap())
     ];
     
-    res_line.update_values(nbr[0].value | nbr[1].value);
-    let op = format_signed_output("=", res_line.value);
-    let l1 = format_signed_output("", nbr[0].value);
-    let l2 = format_signed_output("|", nbr[1].value);
-    let len_res = l2.len();
+    res_bits_line.update_values(nbr[0].value | nbr[1].value);
 
-    interpreter.result.push_front_res(op);
-    if interpreter.op_num >= 1 {
-        dump_line_of_len(&mut interpreter.result, len_res);
-    }
-    interpreter.result.push_front_res(l2);
-    interpreter.result.push_front_res(l1);
-    interpreter.op_num -= 1;
+    interpreter.result.cache.append(&mut vec![('=', res_bits_line.value), ('|', nbr[1].value), (' ', nbr[0].value)]);
+    interpreter.nb_operations -= 1;
     Some(())
 }
 
 fn op_xor(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let mut res_line = bl::BitsLine::new(0);
+    let mut res_bits_line = bl::BitsLine::new(0);
     let nbr: [bl::BitsLine; 2] = [
         bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap()),
         bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap())
     ];
     
-    res_line.update_values(nbr[0].value ^ nbr[1].value);
-    let op = format_signed_output("=", res_line.value);
-    let l1 = format_signed_output("", nbr[0].value);
-    let l2 = format_signed_output("^", nbr[1].value);
-    let len_res = l2.len();
+    res_bits_line.update_values(nbr[0].value ^ nbr[1].value);
+    interpreter.result.cache.append(&mut vec![('=', res_bits_line.value), ('^', nbr[1].value), (' ', nbr[0].value)]);
 
-    interpreter.result.push_front_res(op);
-    if interpreter.op_num >= 1 {
-        dump_line_of_len(&mut interpreter.result, len_res);
-    }
-    interpreter.result.push_front_res(l2);
-    interpreter.result.push_front_res(l1);
-    interpreter.op_num -= 1;
+    //let aligned_res = fm::align_values(("=", res_line.value), (" ", nbr[0].value), ("^", nbr[1].value));
+
+    //let len_res = aligned_res[2].to_owned().len();
+
+    //interpreter.result.push_front_res(aligned_res[0].to_owned());
+    //if interpreter.nb_operations >= 1 {
+        //dump_line_of_len(&mut interpreter.result, len_res);
+    //}
+    //interpreter.result.push_front_res(aligned_res[2].to_owned());
+    //interpreter.result.push_front_res(aligned_res[1].to_owned());
+    interpreter.nb_operations -= 1;
     Some(())
 }
 
-fn op_rightshift(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
-    let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
-    let op = format_signed_output("   ", res_line.value);
+// TODO: FIX NEGATIVE NUMBER
+fn op_not(interpreter: &mut OperationInterpreter) -> String {
+    let mut res_line = bl::BitsLine::new(interpreter.tokens[1].parse::<isize>().unwrap());
+    let _op = fm::format_signed_output(&interpreter.tokens[0], res_line.value);
+    let int_res = !res_line.value;
+    let bin_value = fm::format_bin_string(int_res);
+
+
+    interpreter.result.cache.append(&mut vec![('=', int_res), ('~', res_line.value)]);
+    res_line.bin_value = bin_value; 
+    res_line.update_values(int_res);
+    //let res = fm::format_signed_output("=", res_line.value);
+    //let len_res = res.len();
+
+    //interpreter.result.push_front_res(res);
+    //if interpreter.nb_operations >= 1 {
+        //dump_line_of_len(&mut interpreter.result, len_res);
+    //}
+    //interpreter.result.push_front_res(op);
+    interpreter.nb_operations -= 1;
+    int_res.to_string()
+}
+
+//fn op_rightshift(interpreter: &mut OperationInterpreter) -> Option<()> {
+    //let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
+    //let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
+    //let op = fm::format_signed_output("   ", res_line.value);
     
-    if nb2.value <= 0 {
-        interpreter.result.push_front_res("Error: Cannot perform a rightshift with a value smaller than 1".to_string());
-        interpreter.op_num -= 1;
-        return Some(());
-    }
-    res_line.update_values(res_line.value >> nb2.value);
-    let res = format_signed_output_shift(">>", res_line.value, nb2.value);
-    let len_res = res.len();
+    //if nb2.value <= 0 {
+        //interpreter.result.push_front_res("Error: Cannot perform a rightshift with a value smaller than 1".to_string());
+        //interpreter.op_num -= 1;
+        //return None
+    //}
+    //res_line.update_values(res_line.value >> nb2.value);
+    //let res = fm::format_signed_output_shift(">>", res_line.value, nb2.value);
+    //let len_res = res.len();
 
-    interpreter.result.push_front_res(res);
-    if interpreter.op_num >= 1 {
-        dump_line_of_len(&mut interpreter.result, len_res);
-    }
-    interpreter.result.push_front_res(op);
-    interpreter.op_num -= 1;
-    Some(())
-}
+    //interpreter.result.push_front_res(res);
+    //if interpreter.op_num >= 1 {
+        //dump_line_of_len(&mut interpreter.result, len_res);
+    //}
+    //if interpreter.chains.0 != true {
+        //interpreter.result.push_front_res(op);
+    //}
+    //interpreter.op_num -= 1;
+    //Some(())
+//}
 
-fn op_leftshift(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
-    let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
-    let op = format_signed_output("   ", res_line.value);
+//fn op_leftshift(interpreter: &mut OperationInterpreter) -> Option<()> {
+    //let mut res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
+    //let nb2 = bl::BitsLine::new(interpreter.tokens[2].parse::<isize>().unwrap());
+    //let op = fm::format_signed_output("   ", res_line.value);
     
-    if nb2.value <= 0 {
-        interpreter.result.push_front_res("Error: Cannot perform a leftshift with a value smaller than 1".to_string());
-        interpreter.op_num -= 1;
-        return Some(());
-    }
-    res_line.update_values(res_line.value << nb2.value);
-    let res = format_signed_output_shift("<<", res_line.value, nb2.value);
-    let len_res = res.len();
+    //if nb2.value <= 0 {
+        //interpreter.result.push_front_res("Error: Cannot perform a leftshift with a value smaller than 1".to_string());
+        //interpreter.op_num -= 1;
+        //return Some(());
+    //}
+    //res_line.update_values(res_line.value << nb2.value);
+    //let res = fm::format_signed_output_shift("<<", res_line.value, nb2.value);
+    //let len_res = res.len();
 
-    interpreter.result.push_front_res(res);
-    if interpreter.op_num >= 1 {
-        dump_line_of_len(&mut interpreter.result, len_res);
-    }
-    interpreter.result.push_front_res(op);
-    interpreter.op_num -= 1;
-    Some(())
-}
+    //interpreter.result.push_front_res(res);
+    //if interpreter.op_num >= 1 {
+        //dump_line_of_len(&mut interpreter.result, len_res);
+    //}
+    //if interpreter.chains.0 != true {
+        //interpreter.result.push_front_res(op);
+    //}
+    //interpreter.op_num -= 1;
+    //Some(())
+//}
 
 fn op_hexnumber(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let res = format_hex_signed_output("✪", &interpreter.tokens[0]);
+    let res = fm::format_hex_signed_output("✪", &interpreter.tokens[0]);
     interpreter.result.push_front_res(res);
+    interpreter.result.push_front_res("#".to_string());
     Some(())
 }
 
 fn op_number(interpreter: &mut OperationInterpreter) -> Option<()> {
     let res_line = bl::BitsLine::new(interpreter.tokens[0].parse::<isize>().unwrap());
-    let res = format_signed_output("✪", res_line.value);
+    let res = fm::format_signed_output("✪", res_line.value);
     interpreter.result.push_front_res(res);
+    interpreter.result.push_front_res("#".to_string());
     Some(())
 }
 
-fn op_not(interpreter: &mut OperationInterpreter) -> Option<()> {
-    let mut res_line = bl::BitsLine::new(interpreter.tokens[1].parse::<isize>().unwrap());
-    let op = format_signed_output(&interpreter.tokens[0], res_line.value);
-    res_line.update_values(!res_line.value);
-    let res = format_signed_output("=", res_line.value);
-    let len_res = res.len();
-
-    interpreter.result.push_front_res(res);
-    if interpreter.op_num >= 1 {
-        dump_line_of_len(&mut interpreter.result, len_res);
-    }
-    interpreter.result.push_front_res(op);
-    interpreter.op_num -= 1;
-    Some(())
-}
-
-fn op_mapper() -> HashMap<String, Callback> {
-    let mut map: HashMap<String, Callback> = HashMap::new();
-
-    //map.insert("&".to_string(), op_and);
-    //map.insert("|".to_string(), op_or);
-    //map.insert("^".to_string(), op_xor);
-    //map.insert(">>".to_string(), op_rightshift);
-    //map.insert("<<".to_string(), op_leftshift);
-    map.insert("~".to_string(), op_not);
-    map
-}
-
+#[allow(dead_code)]
 pub struct OperationInterpreter {
-    op_func: HashMap<String, Callback>,
-    tokens: Vec<String>,
-    corr_tokens: Vec<BitwiseToken>,
-    pub op_num: usize,
+    pub tokens: Vec<String>, // TODO: remove pub
+    pub corr_tokens: Vec<BitwiseToken>, // TODO: same here
+    pub nb_operations: usize,
     pub result: result::Results,
-    input: String
+    input: String,
+    tmp_res: String,
+
+    solo: bool,
+    chains: (bool, usize),
 }
 
 impl OperationInterpreter {
     pub fn new() -> Self {
-        OperationInterpreter { op_func: op_mapper(), tokens: Vec::new(), corr_tokens: Vec::new(), op_num: 0, result: result::Results::new(), input: String::new() }
+        OperationInterpreter { tokens: Vec::new(), corr_tokens: Vec::new(), nb_operations: 0, result: result::Results::new(), input: String::new(), tmp_res: String::new(), solo: false, chains: (false, 0) }
     }
 
     pub fn lexer(&mut self, input: &str) -> Vec<String> {
@@ -303,7 +234,7 @@ impl OperationInterpreter {
         tokens
     }
 
-    fn init_op_number(&mut self) {
+    fn init_number_operations(&mut self) {
         let corr_tokens = std::mem::take(&mut self.corr_tokens);
 
         corr_tokens
@@ -311,7 +242,7 @@ impl OperationInterpreter {
             .for_each(|token| {
                 match token {
                     BitwiseToken::NUMBER => {},
-                    _ => self.op_num += 1
+                    _ => self.nb_operations += 1
                 }
             });
         self.corr_tokens = corr_tokens;
@@ -320,6 +251,29 @@ impl OperationInterpreter {
     pub fn clear_token_holders(&mut self) {
         self.corr_tokens.clear();
         self.tokens.clear();
+    }
+
+    // TODO: refactor with vetor methods
+    pub fn chaining_checker(&mut self) -> (bool, usize) {
+        let mut counter = 0;
+        let mut not_num_counter = 0;
+        let tmp = self.corr_tokens.clone();
+
+        if tmp.len() == 2 && tmp[0] == BitwiseToken::NOT && tmp[1]  == BitwiseToken::NUMBER {
+            return (false,  0)
+        }
+        for token in tmp {
+            if token == BitwiseToken::NUMBER || token == BitwiseToken::NOT {
+                counter += 1;
+            }
+            if token != BitwiseToken::NUMBER && token != BitwiseToken::HEXNUMBER {
+                not_num_counter += 1;
+            }
+        }
+        if counter > 2 {
+            return (true, not_num_counter)
+        }
+        (false, 0)
     }
 
     pub fn parser(&mut self) -> Result<(), String> {
@@ -352,69 +306,135 @@ impl OperationInterpreter {
                 }
             });
         self.corr_tokens = corr_tokens;
-        if is_err || self.tokens.len() == 0 {
+        // TODO: check if last token is valid as well as the first one 
+        let token_len = self.tokens.len();
+        if is_err || token_len == 0 {
             let mut err: String = String::from("Error: cannot process this operation: ");
             err.push_str(&self.input);
             self.clear_token_holders();
             return Err(err);
         }
-        self.init_op_number();
+        self.chains = self.chaining_checker();
+        if (self.corr_tokens[0] == BitwiseToken::NUMBER ||  self.corr_tokens[0] == BitwiseToken::HEXNUMBER)
+            && token_len == 1 {
+                self.solo = true;
+        }
+        self.init_number_operations();
         Ok(())
     }
 
     pub fn interpreter(&mut self) {
-        match self.corr_tokens[..] {
-            [] => {},
-            [BitwiseToken::NUMBER, BitwiseToken::AND, BitwiseToken::NUMBER, ..] => {
-                op_and(self).unwrap();
-                self.corr_tokens = self.corr_tokens[3..].to_vec();
-                self.tokens = self.tokens[3..].to_vec();
-            },
-            [BitwiseToken::NUMBER, BitwiseToken::OR, BitwiseToken::NUMBER, ..] => {
-                op_or(self).unwrap();
-                self.corr_tokens = self.corr_tokens[3..].to_vec();
-                self.tokens = self.tokens[3..].to_vec();
-            },
-            [BitwiseToken::NUMBER, BitwiseToken::XOR, BitwiseToken::NUMBER, ..] => {
-                op_xor(self).unwrap();
-                self.corr_tokens = self.corr_tokens[3..].to_vec();
-                self.tokens = self.tokens[3..].to_vec();
-            },
-            [BitwiseToken::NUMBER, BitwiseToken::RIGHTSHIFT, BitwiseToken::NUMBER, ..] => {
-                op_rightshift(self).unwrap();
-                self.corr_tokens = self.corr_tokens[3..].to_vec();
-                self.tokens = self.tokens[3..].to_vec();
-            },
-            [BitwiseToken::NUMBER, BitwiseToken::LEFTSHIFT, BitwiseToken::NUMBER, ..] => {
-                op_leftshift(self).unwrap();
-                self.corr_tokens = self.corr_tokens[3..].to_vec();
-                self.tokens = self.tokens[3..].to_vec();
-            },
-            [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
-                op_not(self).unwrap();
-                self.corr_tokens = self.corr_tokens[2..].to_vec();
-                self.tokens = self.tokens[2..].to_vec();
-            },
-            [BitwiseToken::NUMBER, ..] => {
-                op_number(self).unwrap();
-                self.corr_tokens = self.corr_tokens[1..].to_vec();
-                self.tokens = self.tokens[1..].to_vec();
-            },
-            [BitwiseToken::HEXNUMBER, ..] => {
-                op_hexnumber(self).unwrap();
-                self.corr_tokens = self.corr_tokens[1..].to_vec();
-                self.tokens = self.tokens[1..].to_vec();
-            },
-            _ => {},
+        loop {
+            match self.corr_tokens[..] {
+                [] => {},
+                [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
+                    self.tmp_res = op_not(self);
+                    self.corr_tokens = self.corr_tokens[1..].to_vec();
+                    let _ = std::mem::replace(&mut self.tokens[1], self.tmp_res.clone());
+                    self.tokens = self.tokens[1..].to_vec();
+                    if self.corr_tokens.len() == 1 && self.corr_tokens[0] == BitwiseToken::NUMBER {
+                        break;
+                    }
+                },
+                [BitwiseToken::NUMBER, BitwiseToken::AND, BitwiseToken::NUMBER, ..] => {
+                    op_and(self).unwrap();
+                    self.corr_tokens = self.corr_tokens[3..].to_vec();
+                    self.tokens = self.tokens[3..].to_vec();
+                },
+                [BitwiseToken::NUMBER, BitwiseToken::OR, BitwiseToken::NUMBER, ..] => {
+                    op_or(self).unwrap();
+                    self.corr_tokens = self.corr_tokens[3..].to_vec();
+                    self.tokens = self.tokens[3..].to_vec();
+                },
+                [BitwiseToken::NUMBER, BitwiseToken::XOR, BitwiseToken::NUMBER, ..] => {
+                    op_xor(self).unwrap();
+                    self.corr_tokens = self.corr_tokens[3..].to_vec();
+                    self.tokens = self.tokens[3..].to_vec();
+                },
+                //[BitwiseToken::NUMBER, BitwiseToken::RIGHTSHIFT, BitwiseToken::NUMBER, ..] => {
+                //let res = op_rightshift(self).unwrap();
+                //self.corr_tokens = self.corr_tokens[3..].to_vec();
+                //self.tokens = self.tokens[3..].to_vec();
+                //},
+                //[BitwiseToken::NUMBER, BitwiseToken::LEFTSHIFT, BitwiseToken::NUMBER, ..] => {
+                //op_leftshift(self).unwrap();
+                //self.corr_tokens = self.corr_tokens[3..].to_vec();
+                //self.tokens = self.tokens[3..].to_vec();
+                //},
+                [BitwiseToken::NUMBER, ..] => {
+                    op_number(self).unwrap();
+                    self.corr_tokens = self.corr_tokens[1..].to_vec();
+                    self.tokens = self.tokens[1..].to_vec();
+                },
+                [BitwiseToken::HEXNUMBER, ..] => {
+                    op_hexnumber(self).unwrap();
+                    self.corr_tokens = self.corr_tokens[1..].to_vec();
+                    self.tokens = self.tokens[1..].to_vec();
+                }
+                _ => {},
+            }
+            if self.nb_operations == 0 && self.corr_tokens.len() == 0 {
+                break;
+            }
         }
-        if self.corr_tokens.len() != 0 {
-            self.interpreter();
-            return;
-        }
-        self.clear_token_holders();
-        self.result.push_front_res("#".to_string());
+        self.result.format_result_cache();
     }
 }
+
+
+//#[test]
+//fn test_command_chaining() {
+    //let input = "~12>>2<<3";
+    //let mut op_interpreter = OperationInterpreter::new();
+
+    //op_interpreter.lexer(input);
+    //op_interpreter.parser().unwrap();
+    //op_interpreter.interpreter();
+    //assert_eq!("fpp", "vaa");
+    //assert_eq!(op_interpreter.result.res,
+               //["#", "~  12  00000000 00000000 00000000 00001100  0xc",
+               //"───────────────────────────────────────────────",
+               //"= -13  11111111 11111111 11111111 11110011 -0xd",
+               //"────────────────────────────────────────────────",
+               //">>2 -4  11111111 11111111 11111111 11111100 -0x4"]);
+//}
+
+//#[test]
+//fn test_mutliple_command_chain() {
+    //let inputs =["~12>>2",
+                //"0x12 123", "-1|3", "1     | 3  ",
+                //"1 3", "-0x12", "0"];
+
+    //let mut op_interpreter = OperationInterpreter::new();
+
+    //for input in inputs {
+        //op_interpreter.lexer(input);
+        //op_interpreter.parser().unwrap();
+        //op_interpreter.interpreter();
+    //}
+    //assert_ne!("fooo", "baar")
+//}
+
+//#[test]
+//fn test_mutliple_command_chain2() {
+    //let input = "~12>>2";
+    //let mut op_interpreter = OperationInterpreter::new();
+
+    //op_interpreter.lexer(input);
+    //op_interpreter.parser().unwrap();
+    //op_interpreter.interpreter();
+
+    //op_interpreter.lexer(input);
+    //op_interpreter.parser().unwrap();
+    //op_interpreter.interpreter();
+
+    //assert_eq!(op_interpreter.result.res,
+               //["#", "~  12  00000000 00000000 00000000 00001100  0xc",
+               //"───────────────────────────────────────────────",
+               //"= -13  11111111 11111111 11111111 11110011 -0xd",
+               //"────────────────────────────────────────────────",
+               //">>2 -4  11111111 11111111 11111111 11111100 -0x4"]);
+//}
 
 #[test]
 fn test_tokenizer() {
@@ -449,7 +469,6 @@ fn test_parser() {
     op_interpreter.lexer(hexnum_only);
     op_interpreter.parser().unwrap();
     assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::HEXNUMBER].to_vec());
-    op_interpreter.interpreter();
 }
 
 #[test]
@@ -464,21 +483,3 @@ fn test_invalid_input() {
     assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: lorem ipsum".to_string()));
 }
 
-#[test]
-fn test_format_bin_string() {
-    let value = 1;
-    let value2 = 255;
-    let value3 = 65535;
-    let value4 = 16777215;
-    let value5 = 2147483647;
-    let value6 = 2147483648;
-    let value7: isize = 2147483649;
-
-    assert_eq!(" 00000000 00000000 00000000 00000001", format_bin_string(value));
-    assert_eq!(" 00000000 00000000 00000000 11111111", format_bin_string(value2));
-    assert_eq!(" 00000000 00000000 11111111 11111111", format_bin_string(value3));
-    assert_eq!(" 00000000 11111111 11111111 11111111", format_bin_string(value4));
-    assert_eq!(" 01111111 11111111 11111111 11111111", format_bin_string(value5));
-    assert_eq!(" 10000000 00000000 00000000 00000000", format_bin_string(value6));
-    assert_eq!(" 10000000 00000000 00000000 00000001", format_bin_string(value7));
-}
