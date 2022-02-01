@@ -69,15 +69,13 @@ impl Results {
         let iterator = self.cache.iter();
         let buffer = iterator.map(|&x| { x.1 }).collect::<Vec<isize>>();
 
-        println!("{:?}", buffer[0].to_owned());
         let maxes = fm::get_max_and_index(buffer);
         let mut tmp: String;
         let mut c: char;
         let length = maxes.0.to_string().len();
-        let power = fm::get_power_of_two(maxes.0);
 
         for elem in self.cache.clone() {
-            tmp = fm::align_values((elem.0, elem.1), power, length);
+            tmp = fm::align_values((elem.0, elem.1), length);
             c = tmp.chars().nth(0).unwrap();
             if (c != '=' && c != ' ') || c == '~' {
                self.dump_line_of_len(tmp.len());
@@ -86,8 +84,6 @@ impl Results {
         }
         self.push_front_res("#".to_string());
         self.cache.clear();
-
-        println!("max {} ---------------------------- index {}", maxes.0, maxes.1);
     }
 }
 
