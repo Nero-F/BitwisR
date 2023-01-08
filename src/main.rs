@@ -1,12 +1,12 @@
 #[path = "bitsline.rs"]
 mod bl;
-mod query;
-mod result;
 #[path = "binary_operation.rs"]
 mod boi;
+mod query;
+mod result;
 
-use tuikit::prelude::*;
 use tuikit::key::Key;
+use tuikit::prelude::*;
 
 fn init_bit_table() -> [bl::BitsLine; 8] {
     let v_lines: [bl::BitsLine; 8] = [
@@ -17,16 +17,18 @@ fn init_bit_table() -> [bl::BitsLine; 8] {
         bl::BitsLine::new(16),
         bl::BitsLine::new(32),
         bl::BitsLine::new(64),
-        bl::BitsLine::new(128)
+        bl::BitsLine::new(128),
     ];
     v_lines
 }
 
 fn main() {
-    let term: Term<()> = Term::with_options(TermOptions::default()
-                                                .height(TermHeight::Percent(30))
-                                                .mouse_enabled(true))
-                            .unwrap();
+    let term: Term<()> = Term::with_options(
+        TermOptions::default()
+            .height(TermHeight::Percent(30))
+            .mouse_enabled(true),
+    )
+    .unwrap();
     let _ = term.present();
     let mut query = query::Query::new();
     let mut interpreter = boi::OperationInterpreter::new();
@@ -38,11 +40,19 @@ fn main() {
         match ev {
             Event::Key(Key::ESC) | Event::Key(Key::Ctrl('c')) => break,
             Event::Key(Key::SingleClick(MouseButton::Left, _col, _row)) => {
-                check_bin_cells(&mut v_lines, Rectangle {top: _col as usize, left: _row as usize, width: 1, height: 1 });
-            },
+                check_bin_cells(
+                    &mut v_lines,
+                    Rectangle {
+                        top: _col as usize,
+                        left: _row as usize,
+                        width: 1,
+                        height: 1,
+                    },
+                );
+            }
             Event::Key(Key::Char(ch)) => {
                 query.add_char_to_input(ch);
-            },
+            }
             Event::Key(Key::Backspace) => query.rm_char_to_input(),
             Event::Key(Key::Enter) => {
                 let res = query.get_input();
@@ -54,24 +64,20 @@ fn main() {
                         interpreter.result.push_front_res("#".to_string());
                     }
                 };
-            },
+            }
             _ => {}
         }
         term.draw(&query).unwrap();
         term.draw(&interpreter.result).unwrap();
-        v_lines
-            .iter()
-            .for_each(|line| term.draw(line).unwrap());
+        v_lines.iter().for_each(|line| term.draw(line).unwrap());
         let _ = term.present();
     }
 }
 
 fn check_bin_cells(lines: &mut [bl::BitsLine; 8], mouse: Rectangle) {
-   lines
-       .iter_mut()
-       .for_each(|line| {
-           if line.zone.contains(mouse.top, mouse.left) {
-                line.update_bin_value(mouse.left - bl::COL_BEG);
-           }
-       });
+    lines.iter_mut().for_each(|line| {
+        if line.zone.contains(mouse.top, mouse.left) {
+            line.update_bin_value(mouse.left - bl::COL_BEG);
+        }
+    });
 }
