@@ -18,15 +18,29 @@ pub fn get_power_of_two(value: isize) -> u8 {
 
 pub fn format_signed_output2(token: char, v: isize, width: usize) -> String {
     if v < 0 {
-        format!("{} -{:width$}  {} -{:#x}", token, -1 * v, format_bin_string(v), -1 * v, width=width)
+        format!(
+            "{} -{:width$}  {} -{:#x}",
+            token,
+            -1 * v,
+            format_bin_string(v),
+            -1 * v,
+            width = width
+        )
     } else {
-        format!("{}  {:width$}  {}  {:#x}", token, v, format_bin_string(v), v, width=width)
+        format!(
+            "{}  {:width$}  {}  {:#x}",
+            token,
+            v,
+            format_bin_string(v),
+            v,
+            width = width
+        )
     }
 }
 
 pub fn get_max_and_index(tab: Vec<isize>) -> (isize, usize) {
-    let mut max_index = 0; 
-    let mut max = tab[0]; 
+    let mut max_index = 0;
+    let mut max = tab[0];
 
     for (index, &x) in tab.iter().enumerate() {
         if x > max {
@@ -35,8 +49,8 @@ pub fn get_max_and_index(tab: Vec<isize>) -> (isize, usize) {
         }
     }
     //if max == 0 {
-        //max = 1;
-        //max_index = 2;
+    //max = 1;
+    //max_index = 2;
     //}
     (max, max_index)
 }
@@ -45,22 +59,23 @@ pub fn align_values(values: ResultLine, width: usize) -> String {
     format_signed_output2(values.0, values.1, width)
 }
 
-//TODO: gerer l'exception subtract overflow 
 pub fn format_bin_string(value: isize) -> String {
-    let power = get_power_of_two(value);
     let mut buffer: String;
+    let mut power = get_power_of_two(value);
+    let power_ref = f64::log2(value as f64);
 
+    if (power as f64) == power_ref {
+        power += 8;
+    }
     if value < 0 {
         buffer = format!("{:3b}", value as i32);
-        buffer = buffer[32-power as usize..].to_string();
+        buffer = buffer[32 - power as usize..].to_string();
     } else {
-        buffer  = format!("{:0power$b}", value, power=power.into());
+        buffer = format!("{:0power$b}", value, power = power.into());
     }
 
-    if power == 8 {
-        return buffer
-    }
-    buffer.chars()
+    buffer
+        .chars()
         .enumerate()
         .flat_map(|(i, c)| {
             if i != 0 && i % 8 == 0 {
@@ -70,12 +85,19 @@ pub fn format_bin_string(value: isize) -> String {
             }
             .into_iter()
             .chain(std::iter::once(c))
-        }).collect::<String>()
+        })
+        .collect::<String>()
 }
 
 pub fn format_signed_output(token: &str, v: isize) -> String {
     if v < 0 {
-        format!("{} -{}  {} -{:#x}", token, -1 * v, format_bin_string(v), -1 * v)
+        format!(
+            "{} -{}  {} -{:#x}",
+            token,
+            -1 * v,
+            format_bin_string(v),
+            -1 * v
+        )
     } else {
         format!("{}  {}  {}  {:#x}", token, v, format_bin_string(v), v)
     }
@@ -100,34 +122,69 @@ pub fn format_hex_signed_output(token: &str, h: &str) -> String {
     }
 }
 
-#[test]
-fn test_format_bin_string() {
-    let value = 1;
-    let value2 = 255;
-    let value3 = 65535;
-    let value4 = 16777215;
-    let value5 = 2147483647;
-    let value6 = 2147483648;
-    let value7: isize = 2147483649;
+#[cfg(test)]
+mod u_tests {
+    use super::*;
 
-    assert_eq!("00000001", format_bin_string(value));
-    assert_eq!("11111111", format_bin_string(value2));
-    assert_eq!("11111111 11111111", format_bin_string(value3));
-    assert_eq!("11111111 11111111 11111111", format_bin_string(value4));
-    assert_eq!("01111111 11111111 11111111 11111111", format_bin_string(value5));
-    assert_eq!("10000000 00000000 00000000 00000000", format_bin_string(value6));
-    assert_eq!("10000000 00000000 00000000 00000001", format_bin_string(value7));
-}
+    #[test]
+    fn test_format_bin_string() {
+        let value = 1;
+        let value2 = 255;
+        let value3 = 256;
+        let value4 = 65535;
+        let value5 = 65536;
+        let value6 = 16777215;
+        let value7 = 16777216;
+        let value8 = 2147483647;
+        let value9 = 2147483648;
+        let value10: isize = 2147483649;
+        let value11: isize = 4294967295; // this should be the max we can display
 
-#[test]
-fn test_format_negative_bin_string() {
-    let value = -1;
-    let value2 = -255;
-    let value3 = -65535;
-    let value4 = -16777215;
+        assert_eq!("00000001", format_bin_string(value));
+        assert_eq!("11111111", format_bin_string(value2));
+        assert_eq!("00000001 00000000", format_bin_string(value3));
+        assert_eq!("11111111 11111111", format_bin_string(value4));
+        assert_eq!("00000001 00000000 00000000", format_bin_string(value5));
+        assert_eq!("11111111 11111111 11111111", format_bin_string(value6));
+        assert_eq!(
+            "00000001 00000000 00000000 00000000",
+            format_bin_string(value7)
+        );
+        assert_eq!(
+            "01111111 11111111 11111111 11111111",
+            format_bin_string(value8)
+        );
+        assert_eq!(
+            "10000000 00000000 00000000 00000000",
+            format_bin_string(value9)
+        );
+        assert_eq!(
+            "10000000 00000000 00000000 00000001",
+            format_bin_string(value10)
+        );
+        assert_eq!(
+            "11111111 11111111 11111111 11111111",
+            format_bin_string(value11)
+        );
+    }
 
-    assert_eq!("11111111", format_bin_string(value));
-    assert_eq!("11111111 00000001", format_bin_string(value2));
-    assert_eq!("11111111 00000000 00000001", format_bin_string(value3));
-    assert_eq!("11111111 00000000 00000000 00000001", format_bin_string(value4));
+    #[test]
+    fn test_format_negative_bin_string() {
+        let value = -1;
+        let value2 = -255;
+        let value3 = -256;
+        let value4 = -65535;
+        let value5 = -65536;
+        let value6 = -16777215;
+
+        assert_eq!("11111111", format_bin_string(value));
+        assert_eq!("11111111 00000001", format_bin_string(value2));
+        assert_eq!("11111111 00000000", format_bin_string(value3));
+        assert_eq!("11111111 00000000 00000001", format_bin_string(value4));
+        assert_eq!("11111111 00000000 00000000", format_bin_string(value5));
+        assert_eq!(
+            "11111111 00000000 00000000 00000001",
+            format_bin_string(value6)
+        );
+    }
 }
