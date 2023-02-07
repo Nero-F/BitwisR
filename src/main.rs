@@ -29,27 +29,26 @@ fn main() {
             .mouse_enabled(true),
     )
     .unwrap();
-    let _ = term.present();
     let mut query = query::Query::new();
     let mut interpreter = boi::OperationInterpreter::new();
-    let mut v_lines = init_bit_table();
+    // let mut v_lines = init_bit_table();
 
     while let Ok(ev) = term.poll_event() {
         let _ = term.clear();
 
         match ev {
             Event::Key(Key::ESC) | Event::Key(Key::Ctrl('c')) => break,
-            Event::Key(Key::SingleClick(MouseButton::Left, _col, _row)) => {
-                check_bin_cells(
-                    &mut v_lines,
-                    Rectangle {
-                        top: _col as usize,
-                        left: _row as usize,
-                        width: 1,
-                        height: 1,
-                    },
-                );
-            }
+            // Event::Key(Key::SingleClick(MouseButton::Left, _col, _row)) => {
+            //     check_bin_cells(
+            //         &mut v_lines,
+            //         Rectangle {
+            //             top: _col as usize,
+            //             left: _row as usize,
+            //             width: 1,
+            //             height: 1,
+            //         },
+            //     );
+            // }
             Event::Key(Key::Char(ch)) => {
                 query.add_char_to_input(ch);
             }
@@ -69,8 +68,8 @@ fn main() {
         }
         term.draw(&query).unwrap();
         term.draw(&interpreter.result).unwrap();
-        v_lines.iter().for_each(|line| term.draw(line).unwrap());
-        let _ = term.present();
+        // v_lines.iter().for_each(|line| term.draw(line).unwrap());
+        term.present().unwrap();
     }
 }
 

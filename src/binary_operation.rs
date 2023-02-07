@@ -180,44 +180,48 @@ impl OperationInterpreter {
         OperationInterpreter { tokens: Vec::new(), corr_tokens: Vec::new(), nb_operations: 0, result: result::Results::new(), input: String::new(), tmp_res: String::new(), solo: false, chains: (false, 0) }
     }
 
-    pub fn lexer(&mut self, input: &str) -> Vec<String> {
+    fn get_hex_to_string(input: &str, i: &mut usize) -> String {
+        let mut f = String::new();
+
+        for ch in input[*i..].as_bytes() {
+            // Checks for tabs or spaces
+            if *ch == 0x20_u8 || *ch == 0x90_u8 {
+                break;
+            }
+            *i += 1;
+            f.push(*ch as char);
+        }
+        f
+    }
+
+    pub fn lexer(&mut self, mut input: &str) -> Vec<String> {
         let mut tokens = Vec::new();
         let mut buffer: Vec<char> = Vec::new();
         let mut nbr: isize;
         let mut i: usize = 0;
+
+        input = input.trim();
         self.input = String::from(input);
 
         while i < input.len() {
-            // check for spaces
-            if input.chars().nth(i).unwrap() == ' ' ||
-               input.chars().nth(i).unwrap() == '\t' {
+            // Skip spaces
+            if input.chars().nth(i).unwrap() == ' ' || input.chars().nth(i).unwrap() == '\t' {
                 i += 1;
                 continue;
-            }
+           }
             // Check for hexvalues and get them
-            // TODO: Maybe replace this with regex
             if i + 2 < input.len() &&
                ((input.chars().nth(i).unwrap() == '-' && input.chars().nth(i+1).unwrap() == '0' &&
                (input.chars().nth(i+2).unwrap() == 'x' || input.chars().nth(i+2).unwrap() == 'X')) ||
                (input.chars().nth(i).unwrap() == '0' &&
                (input.chars().nth(i+1).unwrap() == 'x' || input.chars().nth(i+1).unwrap() == 'X'))) {
-                let mut f = String::new();
-                for ch in input[i..].as_bytes() {
-                    // Checks for tabs or spaces
-                    if *ch == 0x20_u8 || *ch == 0x90_u8 {
-                        break;
-                    }
-                    i += 1;
-                    f.push(*ch as char);
-                }
-                tokens.push(f);
+                tokens.push(OperationInterpreter::get_hex_to_string(input, &mut i));
                 continue;
             }
             // Check for decimal values and get them
             if input.chars().nth(i).unwrap() == '-' && i + 1 < input.len() &&
                input.chars().nth(i+1).unwrap().is_ascii_digit() ||
-               input.chars().nth(i).unwrap().is_ascii_digit()
-               {
+               input.chars().nth(i).unwrap().is_ascii_digit() {
                 if !buffer.is_empty() {
                     tokens.push(buffer.iter().collect::<String>());
                     buffer.clear();
@@ -280,6 +284,7 @@ impl OperationInterpreter {
         let mut is_err: bool = false;
         let mut corr_tokens = std::mem::take(&mut self.corr_tokens);
         let reg_hex = regex::Regex::new(r"^-?0[xX][0-9a-fA-F]+$").unwrap();
+        let reg_dex = regex::Regex::new(r"^-?\d+$").unwrap();
 
         self.tokens
             .clone()
@@ -326,31 +331,30 @@ impl OperationInterpreter {
     pub fn interpreter(&mut self) {
         loop {
             match self.corr_tokens[..] {
-                [] => {},
-                [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
-                    self.tmp_res = op_not(self);
-                    self.corr_tokens = self.corr_tokens[1..].to_vec();
-                    let _ = std::mem::replace(&mut self.tokens[1], self.tmp_res.clone());
-                    self.tokens = self.tokens[1..].to_vec();
-                    if self.corr_tokens.len() == 1 && self.corr_tokens[0] == BitwiseToken::NUMBER {
-                        break;
-                    }
-                },
-                [BitwiseToken::NUMBER, BitwiseToken::AND, BitwiseToken::NUMBER, ..] => {
-                    op_and(self).unwrap();
-                    self.corr_tokens = self.corr_tokens[3..].to_vec();
-                    self.tokens = self.tokens[3..].to_vec();
-                },
-                [BitwiseToken::NUMBER, BitwiseToken::OR, BitwiseToken::NUMBER, ..] => {
-                    op_or(self).unwrap();
-                    self.corr_tokens = self.corr_tokens[3..].to_vec();
-                    self.tokens = self.tokens[3..].to_vec();
-                },
-                [BitwiseToken::NUMBER, BitwiseToken::XOR, BitwiseToken::NUMBER, ..] => {
-                    op_xor(self).unwrap();
-                    self.corr_tokens = self.corr_tokens[3..].to_vec();
-                    self.tokens = self.tokens[3..].to_vec();
-                },
+                // [BitwiseToken::NOT, BitwiseToken::NUMBER, ..] => {
+                //     self.tmp_res = op_not(self);
+                //     self.corr_tokens = self.corr_tokens[1..].to_vec();
+                //     let _ = std::mem::replace(&mut self.tokens[1], self.tmp_res.clone());
+                //     self.tokens = self.tokens[1..].to_vec();
+                //     if self.corr_tokens.len() == 1 && self.corr_tokens[0] == BitwiseToken::NUMBER {
+                //         break;
+                //     }
+                // },
+                // [BitwiseToken::NUMBER, BitwiseToken::AND, BitwiseToken::NUMBER, ..] => {
+                //     op_and(self).unwrap();
+                //     self.corr_tokens = self.corr_tokens[3..].to_vec();
+                //     self.tokens = self.tokens[3..].to_vec();
+                // },
+                // [BitwiseToken::NUMBER, BitwiseToken::OR, BitwiseToken::NUMBER, ..] => {
+                //     op_or(self).unwrap();
+                //     self.corr_tokens = self.corr_tokens[3..].to_vec();
+                //     self.tokens = self.tokens[3..].to_vec();
+                // },
+                // [BitwiseToken::NUMBER, BitwiseToken::XOR, BitwiseToken::NUMBER, ..] => {
+                //     op_xor(self).unwrap();
+                //     self.corr_tokens = self.corr_tokens[3..].to_vec();
+                //     self.tokens = self.tokens[3..].to_vec();
+                // },
                 //[BitwiseToken::NUMBER, BitwiseToken::RIGHTSHIFT, BitwiseToken::NUMBER, ..] => {
                 //let res = op_rightshift(self).unwrap();
                 //self.corr_tokens = self.corr_tokens[3..].to_vec();
@@ -381,6 +385,57 @@ impl OperationInterpreter {
     }
 }
 
+#[cfg(test)]
+mod u_test {
+    use super::*;
+
+#[test]
+fn test_invalid_input() {
+    let input = "13a1";
+    let input2 = "lorem ipsum";
+
+    let mut op_interpreter = OperationInterpreter::new();
+    op_interpreter.lexer(input);
+    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
+    op_interpreter.input = input2.to_string();
+    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: lorem ipsum".to_string()));
+}
+
+#[test]
+fn test_tokenizer() {
+    let input = "123344abzefc2112333";
+    let input2 = "0x12 123";
+    let input3 = "-1|3";
+    let input4 = "1     | 3  ";
+    let input5 = "1 3";
+    let input6 = "-0x12";
+    let input7 = "0";
+    let mut op_interpreter = OperationInterpreter::new();
+
+    assert_eq!(["123344", "abzefc", "2112333"].to_vec(), op_interpreter.lexer(input));
+    assert_eq!(["0x12", "123"].to_vec(), op_interpreter.lexer(input2));
+    assert_eq!(["-1", "|", "3"].to_vec(), op_interpreter.lexer(input3));
+    assert_eq!(["1", "|", "3"].to_vec(), op_interpreter.lexer(input4));
+    assert_eq!(["1", "3"].to_vec(), op_interpreter.lexer(input5));
+    assert_eq!(["-0x12"].to_vec(), op_interpreter.lexer(input6));
+    assert_eq!(["0"].to_vec(), op_interpreter.lexer(input7));
+}
+
+
+#[test]
+fn test_parser() {
+    let num_only = "42";
+    let hexnum_only = "0x2a";
+
+    let mut op_interpreter = OperationInterpreter::new();
+    op_interpreter.lexer(num_only);
+    op_interpreter.parser().unwrap();
+    assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::NUMBER].to_vec());
+    op_interpreter.interpreter();
+    op_interpreter.lexer(hexnum_only);
+    op_interpreter.parser().unwrap();
+    assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::HEXNUMBER].to_vec());
+}
 
 //#[test]
 //fn test_command_chaining() {
@@ -435,51 +490,5 @@ impl OperationInterpreter {
                //"────────────────────────────────────────────────",
                //">>2 -4  11111111 11111111 11111111 11111100 -0x4"]);
 //}
-
-#[test]
-fn test_tokenizer() {
-    let input = "123344abzefc2112333";
-    let input2 = "0x12 123";
-    let input3 = "-1|3";
-    let input4 = "1     | 3  ";
-    let input5 = "1 3";
-    let input6 = "-0x12";
-    let input7 = "0";
-    let mut op_interpreter = OperationInterpreter::new();
-
-    assert_eq!(["123344", "abzefc", "2112333"].to_vec(), op_interpreter.lexer(input));
-    assert_eq!(["0x12", "123"].to_vec(), op_interpreter.lexer(input2));
-    assert_eq!(["-1", "|", "3"].to_vec(), op_interpreter.lexer(input3));
-    assert_eq!(["1", "|", "3"].to_vec(), op_interpreter.lexer(input4));
-    assert_eq!(["1", "3"].to_vec(), op_interpreter.lexer(input5));
-    assert_eq!(["-0x12"].to_vec(), op_interpreter.lexer(input6));
-    assert_eq!(["0"].to_vec(), op_interpreter.lexer(input7));
-}
-
-#[test]
-fn test_parser() {
-    let num_only = "42";
-    let hexnum_only = "0x2a";
-
-    let mut op_interpreter = OperationInterpreter::new();
-    op_interpreter.lexer(num_only);
-    op_interpreter.parser().unwrap();
-    assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::NUMBER].to_vec());
-    op_interpreter.interpreter();
-    op_interpreter.lexer(hexnum_only);
-    op_interpreter.parser().unwrap();
-    assert_eq!(op_interpreter.corr_tokens, [BitwiseToken::HEXNUMBER].to_vec());
-}
-
-#[test]
-fn test_invalid_input() {
-    let input = "13a1";
-    let input2 = "lorem ipsum";
-
-    let mut op_interpreter = OperationInterpreter::new();
-    op_interpreter.lexer(input);
-    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: 13a1".to_string()));
-    op_interpreter.input = input2.to_string();
-    assert_eq!(op_interpreter.parser(), Err("Error: cannot process this operation: lorem ipsum".to_string()));
 }
 
