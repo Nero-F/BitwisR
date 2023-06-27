@@ -4,12 +4,16 @@ use tuikit::prelude::*;
 pub struct Query {
     history: Vec<String>,
     prompt: String,
-    query: Vec<char>
+    query: Vec<char>,
 }
 
 impl Query {
     pub fn new() -> Query {
-        Query { history: Vec::new(), prompt: "c> ".to_string(), query: Vec::new() }
+        Query {
+            history: Vec::new(),
+            prompt: "c> ".to_string(),
+            query: Vec::new(),
+        }
     }
 
     pub fn add_char_to_input(&mut self, ch: char) {
@@ -22,8 +26,10 @@ impl Query {
 
     pub fn get_input(&mut self) -> String {
         self.query
-            .drain(..).collect::<Vec<char>>()
-            .iter().collect::<String>()
+            .drain(..)
+            .collect::<Vec<char>>()
+            .iter()
+            .collect::<String>()
     }
 }
 
