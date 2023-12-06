@@ -2,11 +2,16 @@
 mod bl;
 #[path = "binary_operation.rs"]
 mod boi;
+mod lexer;
 mod query;
 mod result;
 
-use tuikit::key::Key;
+use std::env;
+use std::io::{self, BufRead};
+
 use tuikit::prelude::*;
+
+use crate::lexer::{Lexer, Tokenv2};
 
 fn init_bit_table() -> [bl::BitsLine; 8] {
     let v_lines: [bl::BitsLine; 8] = [
@@ -22,7 +27,32 @@ fn init_bit_table() -> [bl::BitsLine; 8] {
     v_lines
 }
 
+fn repl() -> Result<()> {
+    let stdin = io::stdin();
+    for line in stdin.lock().lines() {
+        if let Ok(line) = line {
+            let mut tokenizer = Lexer::new(line);
+
+            while let Ok(token) = tokenizer.next_token() {
+                println!("{} ", token);
+                if let Tokenv2::EOF = token {
+                    break;
+                }
+            }
+        }
+    }
+    return Ok(());
+}
+
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() == 2 && args[1] == "debug"{
+        println!("REPL MODE ACTIVATED");
+        repl().unwrap();
+        return;
+    }
+
     let term: Term<()> = Term::with_options(
         TermOptions::default()
             .height(TermHeight::Percent(30))
