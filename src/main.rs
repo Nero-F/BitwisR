@@ -2,6 +2,7 @@
 mod bl;
 #[path = "binary_operation.rs"]
 mod boi;
+mod interpreter;
 mod lexer;
 mod query;
 mod result;
@@ -10,8 +11,7 @@ use std::env;
 use std::io::{self, BufRead};
 
 use tuikit::prelude::*;
-
-use crate::lexer::{Lexer, Tokenv2};
+use crate::interpreter::Interpreter;
 
 fn init_bit_table() -> [bl::BitsLine; 8] {
     let v_lines: [bl::BitsLine; 8] = [
@@ -29,16 +29,11 @@ fn init_bit_table() -> [bl::BitsLine; 8] {
 
 fn repl() -> Result<()> {
     let stdin = io::stdin();
+    let mut interpreter = Interpreter::new();
+
     for line in stdin.lock().lines() {
         if let Ok(line) = line {
-            let mut tokenizer = Lexer::new(line);
-
-            while let Ok(token) = tokenizer.next_token() {
-                println!("{} ", token);
-                if let Tokenv2::EOF = token {
-                    break;
-                }
-            }
+            interpreter.parse(line);
         }
     }
     return Ok(());
