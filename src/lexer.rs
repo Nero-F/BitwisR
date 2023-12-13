@@ -2,13 +2,15 @@ use anyhow::Result;
 use std::fmt::Display;
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Tokenv2 {
     AND,
     OR,
     XOR,
-    RIGHTSHIFT,
-    LEFTSHIFT,
+    RSHIFT,
+    LSHIFT,
+    RPARENT,
+    LPARENT,
     NOT,
     EOF,
     ILLEGAL,
@@ -22,8 +24,10 @@ impl Display for Tokenv2 {
             Tokenv2::AND => write!(f, "AND"),
             Tokenv2::OR => write!(f, "OR"),
             Tokenv2::XOR => write!(f, "XOR"),
-            Tokenv2::RIGHTSHIFT => write!(f, "RIGHTSHIFT"),
-            Tokenv2::LEFTSHIFT => write!(f, "LEFTSHIFT"),
+            Tokenv2::RSHIFT => write!(f, "RIGHTSHIFT"),
+            Tokenv2::LSHIFT => write!(f, "LEFTSHIFT"),
+            Tokenv2::RPARENT => write!(f, "RIGHTPARENT"),
+            Tokenv2::LPARENT => write!(f, "LEFTPARENT"),
             Tokenv2::NOT => write!(f, "NOT"),
             Tokenv2::EOF => write!(f, "Eof"),
             Tokenv2::ILLEGAL => write!(f, "ILLEGAL"),
@@ -101,28 +105,30 @@ impl Lexer {
             b'&' => Tokenv2::AND,
             b'|' => Tokenv2::OR,
             b'^' => Tokenv2::XOR,
-            b'!' => Tokenv2::NOT,
+            b'~' => Tokenv2::NOT,
             b'>' => {
                 if self.peek_char() != b'>' {
-                    unreachable!("PPAS OUF")
+                    unreachable!("incorrect input: '>' maybe try with '>>'.")
                 }
                 self.read_char();
-                Tokenv2::RIGHTSHIFT
+                Tokenv2::RSHIFT
             }
             b'<' => {
                 if self.peek_char() != b'<' {
-                    unreachable!("PPAS OUF")
+                    unreachable!("incorrect input: '<' maybe try with '<<'.")
                 }
                 self.read_char();
-                Tokenv2::LEFTSHIFT
+                Tokenv2::LSHIFT
             }
+            b'(' => Tokenv2::LPARENT,
+            b')' => Tokenv2::RPARENT,
             b'0'..=b'9' => {
                 if self.ch == b'0' && self.peek_char() == b'X' |/* | self.peek_char() == */ b'x' {
                     self.read_char();
                     self.read_char();
-                    Tokenv2::HEXNUMBER(self.read_hex_number())
+                    return Ok(Tokenv2::HEXNUMBER(self.read_hex_number()));
                 } else {
-                    Tokenv2::NUMBER(self.read_number())
+                    return Ok(Tokenv2::NUMBER(self.read_number()));
                 }
             }
             0 => Tokenv2::EOF,
@@ -130,16 +136,14 @@ impl Lexer {
                 unreachable!("PPAS OUF")
             }
         };
-
         self.read_char();
-
         return Ok(token);
     }
 }
 
 #[test]
 fn get_next_token() -> Result<()> {
-    let input = "&|^!>><< 42 0x12";
+    let input = "&|^~>><<)(42 0x12";
     let mut lexer = Lexer::new(input.into());
 
     let tokens = vec![
@@ -147,8 +151,10 @@ fn get_next_token() -> Result<()> {
         Tokenv2::OR,
         Tokenv2::XOR,
         Tokenv2::NOT,
-        Tokenv2::RIGHTSHIFT,
-        Tokenv2::LEFTSHIFT,
+        Tokenv2::RSHIFT,
+        Tokenv2::LSHIFT,
+        Tokenv2::RPARENT,
+        Tokenv2::LPARENT,
         Tokenv2::NUMBER("42".to_string()),
         Tokenv2::HEXNUMBER("12".to_string()),
     ];
