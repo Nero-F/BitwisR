@@ -9,5 +9,6 @@ edition = "2018"
 [dependencies]
 tuikit = "*"
 env_logger = "*"
-atoi = ""
-regex = "1"
+atoi = "*"
+regex = "*"
+anyhow = "*"
