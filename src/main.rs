@@ -2,6 +2,7 @@
 mod bl;
 #[path = "binary_operation.rs"]
 mod boi;
+mod expression_tree;
 mod interpreter;
 mod lexer;
 mod query;
@@ -10,8 +11,9 @@ mod result;
 use std::env;
 use std::io::{self, BufRead};
 
-use tuikit::prelude::*;
+use crate::expression_tree::ExpressionTree;
 use crate::interpreter::Interpreter;
+use tuikit::prelude::*;
 
 fn init_bit_table() -> [bl::BitsLine; 8] {
     let v_lines: [bl::BitsLine; 8] = [
@@ -30,10 +32,13 @@ fn init_bit_table() -> [bl::BitsLine; 8] {
 fn repl() -> Result<()> {
     let stdin = io::stdin();
     let mut interpreter = Interpreter::new();
+    let mut tree = ExpressionTree::new();
 
     for line in stdin.lock().lines() {
         if let Ok(line) = line {
             interpreter.parse(line);
+            tree.build(&interpreter.postfix_expression);
+            tree.evaluate();
         }
     }
     return Ok(());
@@ -42,7 +47,7 @@ fn repl() -> Result<()> {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() == 2 && args[1] == "debug"{
+    if args.len() == 2 && args[1] == "debug" {
         println!("REPL MODE ACTIVATED");
         repl().unwrap();
         return;

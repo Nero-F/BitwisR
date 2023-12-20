@@ -6,14 +6,14 @@ use crate::lexer::{Lexer, Tokenv2};
 
 pub struct Interpreter {
     buffer: Vec<Tokenv2>,
-    postfix_expression: String,
+    pub postfix_expression: Vec<String>,
 }
 
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
             buffer: Vec::new(),
-            postfix_expression: String::new(),
+            postfix_expression: Vec::new(),
         }
     }
 
@@ -29,21 +29,17 @@ impl Interpreter {
     }
 
     fn prec(&self, tok: Tokenv2) -> i8 {
-        if tok == Tokenv2::NOT {
-            4
-        } else if tok == Tokenv2::AND {
-            3
-        } else if tok == Tokenv2::XOR {
-            2
-        } else if tok == Tokenv2::OR {
-            1
-        } else {
-            -1
+        match tok {
+            Tokenv2::NOT => 4,
+            Tokenv2::AND => 3,
+            Tokenv2::XOR => 2,
+            Tokenv2::OR => 1,
+            _ => -1
         }
     }
     fn infix_to_postfix(&mut self) {
         let mut stack: VecDeque<Tokenv2> = VecDeque::new();
-        let mut expression = String::new();
+        let mut expression: VecDeque<&str> = VecDeque::with_capacity(self.buffer.len());
 
         let token_map: HashMap<Tokenv2, &str> = HashMap::from([
             (Tokenv2::AND, "&"),
@@ -58,11 +54,11 @@ impl Interpreter {
 
         for elem in &self.buffer {
             match elem {
-                Tokenv2::NUMBER(x) => expression.push_str(&x),
+                Tokenv2::NUMBER(x) => expression.push_back(&x),
                 Tokenv2::LPARENT => stack.push_back(elem.to_owned()),
                 Tokenv2::RPARENT => {
                     while stack.back() != Some(&Tokenv2::LPARENT) {
-                        expression.push_str(token_map[stack.back().unwrap()]);
+                        expression.push_back(token_map[stack.back().unwrap()]);
                         stack.pop_back();
                     }
                     stack.pop_back();
@@ -76,7 +72,7 @@ impl Interpreter {
                     while !stack.is_empty()
                         && self.prec(elem.to_owned()) <= self.prec(stack.back().unwrap().to_owned())
                     {
-                        expression.push_str(token_map[stack.back().unwrap()]);
+                        expression.push_back(token_map[stack.back().unwrap()]);
                         stack.pop_back();
                     }
                     stack.push_back(elem.to_owned());
@@ -85,9 +81,9 @@ impl Interpreter {
             }
         }
         while !stack.is_empty() {
-            expression.push_str(token_map[stack.back().unwrap()]);
+            expression.push_back(token_map[stack.back().unwrap()]);
             stack.pop_back();
         }
-        self.postfix_expression = expression;
+        self.postfix_expression = expression.iter().map(|&s|s.into()).collect();
     }
 }
