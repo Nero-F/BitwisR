@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::fmt::Display;
 
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum Tokenv2 {
     AND,
     OR,
@@ -132,8 +132,11 @@ impl Lexer {
                 }
             }
             0 => Tokenv2::EOF,
-            _ => {
-                unreachable!("PPAS OUF")
+            invalid_pattern => {
+                unreachable!(
+                    "Error with input, invalid_pattern found: {}",
+                    invalid_pattern as char
+                )
             }
         };
         self.read_char();
