@@ -1,6 +1,6 @@
 use atoi::atoi;
 //use std::collections::HashMap;
-extern crate regex;
+use regex;
 
 #[path = "bitsline.rs"]
 mod bl;

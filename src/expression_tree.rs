@@ -1,10 +1,45 @@
 use std::collections::VecDeque;
+use std::fmt::{Display, Formatter, Result};
 
 pub struct BinaryOperationExpressionTree {
     root: BinaryOperationLink,
 }
 
 pub type ExpressionTree = BinaryOperationExpressionTree;
+
+impl Display for ExpressionTree {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let node = &self.root;
+
+        fn _write(nbr: isize, f: &mut Formatter<'_>) -> Result {
+            if nbr < 0 {
+                write!(f, " {} {:08b} -{:#x}\n", nbr, nbr, nbr * -1)
+            } else {
+                write!(f, " {} {:08b} {:#x}\n", nbr, nbr, nbr)
+            }
+        }
+
+        fn fmt_rec(node: &BOLink, f: &mut Formatter<'_>) -> Result {
+            match node {
+                BOLink::Null => {}
+                BOLink::Operator(x) => {
+                    fmt_rec(&x.left, f)?;
+                    write!(f, "{}", x.operator)?;
+                    fmt_rec(&x.right, f)?;
+
+                    write!(f, "= ")?;
+                    _write(x.res.unwrap(), f)?;
+                }
+                BOLink::Operand(x) => {
+                    _write(**x, f)?;
+                }
+            };
+            Ok(())
+        }
+        fmt_rec(node, f)
+    }
+}
+
 type BOLink = BinaryOperationLink;
 
 struct ResNode {
@@ -93,16 +128,16 @@ impl BinaryOperationExpressionTree {
     //                (BOL::Operator: '&'; res: 4)    (BOL::Operand: '42')
     //                /                \
     //   (BOL::Operand: 12)  (BOL::Operand: 5)
-    fn evaluation(&self, node: &BOLink) -> isize {
+    fn evaluation(node: &mut BOLink) -> isize {
         match node {
             BOLink::Null => 0,
             BOLink::Operator(x) => {
-                let operand_l = self.evaluation(&x.left);
-                let operand_r = self.evaluation(&x.right);
+                let operand_l = Self::evaluation(&mut x.left);
+                let operand_r = Self::evaluation(&mut x.right);
                 println!("left ::: {}", operand_l);
                 println!("right ::: {}", operand_r);
 
-                match x.operator.as_str() {
+                let r = match x.operator.as_str() {
                     "&" => operand_l & operand_r,
                     "|" => operand_l | operand_r,
                     "^" => operand_l ^ operand_r,
@@ -110,14 +145,16 @@ impl BinaryOperationExpressionTree {
                     "<<" => operand_l << operand_r,
                     "~" => !operand_r,
                     _ => panic!("There must be an error somewhere :/..."),
-                }
+                };
+                x.res = Some(r);
+                r
             }
             BOLink::Operand(x) => **x,
         }
     }
 
-    pub fn evaluate(&self) {
-        let x = self.evaluation(&self.root);
+    pub fn evaluate(&mut self) {
+        let x = Self::evaluation(&mut self.root);
         println!("res = {}", x)
     }
 

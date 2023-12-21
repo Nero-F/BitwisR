@@ -39,6 +39,7 @@ fn repl() -> Result<()> {
             interpreter.parse(line);
             tree.build(&interpreter.postfix_expression);
             tree.evaluate();
+            println!("{}", tree);
         }
     }
     return Ok(());
