@@ -55,6 +55,7 @@ impl Interpreter {
         for elem in &self.buffer {
             match elem {
                 Tokenv2::NUMBER(x) => expression.push_back(&x),
+                Tokenv2::HEXNUMBER(x) => expression.push_back(&x),
                 Tokenv2::LPARENT => stack.push_back(elem.to_owned()),
                 Tokenv2::RPARENT => {
                     while stack.back() != Some(&Tokenv2::LPARENT) {

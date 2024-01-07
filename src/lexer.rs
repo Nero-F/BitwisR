@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::isize;
 use std::fmt::Display;
 
 #[allow(dead_code)]
@@ -89,7 +90,8 @@ impl Lexer {
         while self.ch.is_ascii_hexdigit() {
             self.read_char();
         }
-        return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
+        let hex = String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
+        return isize::from_str_radix(&hex, 16).unwrap().to_string();
     }
 
     fn skip_spaces(&mut self) {
@@ -123,13 +125,28 @@ impl Lexer {
             b'(' => Tokenv2::LPARENT,
             b')' => Tokenv2::RPARENT,
             b'0'..=b'9' => {
-                if self.ch == b'0' && self.peek_char() == b'X' |/* | self.peek_char() == */ b'x' {
+                if self.ch == b'0' && self.peek_char() == b'X' | b'x' {
                     self.read_char();
                     self.read_char();
                     return Ok(Tokenv2::HEXNUMBER(self.read_hex_number()));
                 } else {
                     return Ok(Tokenv2::NUMBER(self.read_number()));
                 }
+            }
+            b'-' => {
+                self.peek_char();
+                self.read_char();
+                let mut f: String;
+                if self.ch == b'0' && self.peek_char() == b'X' | b'x' {
+                    self.read_char();
+                    self.read_char();
+                    f = self.read_hex_number();
+                    f.insert(0, '-');
+                    return Ok(Tokenv2::HEXNUMBER(f));
+                }
+                f = self.read_hex_number();
+                f.insert(0, '-');
+                return Ok(Tokenv2::NUMBER(f));
             }
             0 => Tokenv2::EOF,
             invalid_pattern => {
